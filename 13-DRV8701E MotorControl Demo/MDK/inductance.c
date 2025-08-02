@@ -70,11 +70,6 @@ void direction_adc_get(void)
     // 归一化 normalization
     for (i = 0; i < NUM; i++)
         AD_ONE[i] = 100 * (float)ad_ave[i] / MAX_ADC[i];
-	
-    // 环岛判断 四电感
-    // if (flag == 0 && AD_ONE[0] >= 20 && AD_ONE[3] >= 20) { //环岛
-    //     encoder_temp = encoder_ave;
-		
 		
     //     if (AD_ONE[1] >= AD_ONE[4] * 2 && AD_ONE[1] >= 30) {
 	// 		flag = 2;
@@ -91,10 +86,10 @@ void direction_adc_get(void)
     // 环岛判断 五电感
     // if (flag == 0 && flag1 == 0 && AD_ONE[2] >= 60) {
     // if (flag == 0 && ((AD_ONE[0] >= 25 && AD_ONE[3] >= 25 && AD_ONE[2] >= 35 && (AD_ONE[1] <= 20 || AD_ONE[4] <= 20)))) {
-    // if (flag == 0 && ((AD_ONE[0] + AD_ONE[3]) >= 40.0f)) {
-	// 	encoder_temp = encoder_ave;
-	// 	flag = 1;
-    // }
+    if (flag == 0 && ((AD_ONE[0] + AD_ONE[3]) >= 40.0f)) {
+		encoder_temp = encoder_ave;
+		flag = 1;
+    }
 
     // 差比和计算
     aaddcc.last_err_dir = aaddcc.err_dir;

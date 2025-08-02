@@ -21,14 +21,12 @@ void Path_record(void)
 {
     // 判断是否需要记录路径点 (角速度超过阈值)
     if (flag_isturn == 0) {
-        if ((path_point_count < MAX_PATH_POINTS - 1) && (abs(imu660ra_gyro_z) / 16.4f > gyro_threshold_high)
-             && fabs(yaw) >= angle_turn && encoder_ave > distance_min) {
+        if ((path_point_count < MAX_PATH_POINTS - 1) && (abs(imu660ra_gyro_z) / 16.4f > gyro_threshold_high) && fabs(yaw) >= angle_turn && encoder_ave > distance_min) {
             Point_record();
         }
     }
     else {
-        if ((path_point_count < MAX_PATH_POINTS - 1) && (abs(imu660ra_gyro_z) / 16.4f < gyro_threshold_low)
-             && encoder_ave > distance_min) {
+        if ((path_point_count < MAX_PATH_POINTS - 1) && (abs(imu660ra_gyro_z) / 16.4f < gyro_threshold_low) && encoder_ave > distance_min) {
             Point_record();
         }
     }
@@ -56,19 +54,11 @@ void Point_record(void)
 }
 
 // 快速循迹函数 (第二圈使用)
-void fast_tracking(void)
-{
-    // if (flag_fast_start == 0) {
-    //     flag_fast_start = 1;
-    //     refresh();
-    //     delay_ms(3000);
-    // }
-    // a = 1;
+void fast_tracking(void) {
     if (j + 1 < path_point_count) {
         if (encoder_ave >= path_points[j].distance) {
             // 移动到下一个路径点
             j++;
-            // refresh();
         }
         speed_select(path_points[j].isturn, (path_points[j-1].distance + path_points[j].distance) / 2,
                      path_points[j].distance - path_points[j-1].distance, path_points[j].yaw_relative, path_points[j + 1].yaw_relative);

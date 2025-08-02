@@ -850,21 +850,11 @@ void ips114_show(void)
     ips114_showint16(60, 6, motor_left.encoder_data);
     ips114_showint16(120, 6, motor_right.encoder_data);
 
-//    ips114_showstr(0, 7, "speed");
-////  ips114_showuint8(50, 7, count_flag_4);
-//    ips114_showfloat(50, 7, test_speed * 0.017336, 3, 3);
-	
-// 	ips114_showstr(0, 7, "offset");
-// //  ips114_showuint8(50, 7, count_flag_4);
-//     ips114_showfloat(50, 7, Gyro_offset_z, 4, 2);
     ips114_showstr(0, 7, "j");
     ips114_showuint16(50, 7, j);
 
     ips114_showstr(110, 7, "angle");
     ips114_showfloat(150, 7, yaw, 4, 2);
-
-//	ips114_showstr(110, 7, "angle");
-//    ips114_showfloat(150, 7, (imu660ra_gyro_z - Gyro_offset_z) / 65.6, 4, 2);
 }
 
 void angle_gyro()

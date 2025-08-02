@@ -1,6 +1,5 @@
 #include "headfile.h"
 #define LED P52
-#define TOF_DISTANCE 700
 
 extern uint8 send_flag;
 uint32 timer_cnt = 0;
@@ -36,14 +35,8 @@ void TM3_Isr() interrupt 19
 void TM4_Isr() interrupt 20
 {
     TIM4_CLEAR_FLAG; // 清除??????标志
-    if (timing_started_start)  timer_cnt++;
-    // 编码器获得速度???
-//	count_tof +=1; 
-//	if(count_tof == 7 && (count_flag_4 ==0 || count_flag_4 == 1) )  //过完障???和坡道后不在判断tof
-//	{		
-//		count_tof =0;
-//		//block_judgement();
-//	}
+    // if (timing_started_start)  timer_cnt++;
+
 	voltage = read_voltage();
     // suction_fan_control();
 

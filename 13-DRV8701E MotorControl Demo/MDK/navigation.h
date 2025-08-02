@@ -11,7 +11,7 @@ typedef struct {
 } PathPoint;
 
 // 路径记忆数组
-#define MAX_PATH_POINTS 285
+#define MAX_PATH_POINTS 270
 extern PathPoint path_points[MAX_PATH_POINTS];
 
 extern uint16 path_point_count;
@@ -34,7 +34,7 @@ extern uint8 a;
 #define err_turn 30
 
 #define distance_threshold 50 * distance_ratio  // 路径点距离阈值，用于判断是否为长直道
-#define distance_min 15 * distance_ratio  // 最小路径点距离，用于筛除很短的路径点
+#define distance_min 10 * distance_ratio  // 最小路径点距离，用于筛除很短的路径点
 #define distance_ratio 134 / 30  // 编码器计数值与实际距离的比例系数(计数值/实际距离cm)
 
 extern float speed_high;

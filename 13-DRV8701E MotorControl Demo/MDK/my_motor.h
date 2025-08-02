@@ -109,7 +109,8 @@ extern uint8 flag_huandao;
 extern float target_angle_in;
 extern float target_angle_out;
 
-extern float encoder_ave;
+// extern float encoder_ave;
+extern int32 encoder_ave;
 extern float encoder_temp;
 extern int16 normal_speed;
 extern int16 changed_speed;

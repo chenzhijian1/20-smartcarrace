@@ -77,9 +77,13 @@ int16 changed_speed = 0;
 int16 set_leftspeed = 0;
 int16 set_rightspeed = 0;
 // 编码器积分值
-float encoder_left = 0.0;
-float encoder_right = 0.0;
-float encoder_ave = 0.0;
+// float encoder_left = 0.0;
+// float encoder_right = 0.0;
+// float encoder_ave = 0.0;
+int32 encoder_left = 0;
+int32 encoder_right = 0;
+int32 encoder_ave = 0;
+
 float encoder_temp = 0.0;
 
 float lpf_encoder = 0.2; //编码器低通滤波系数
@@ -336,8 +340,6 @@ void car_stop_judge() {
 void encoder_get(void) {
     motor_left.encoder_data = (int16)ctimer_count_read(SPEEDL_PULSE);
     motor_right.encoder_data = (int16)ctimer_count_read(SPEEDR_PULSE);
-//	motor_left.encoder_data = motor_left.encoder_data * lpf_encoder + (int16)ctimer_count_read(SPEEDL_PULSE) * (1.0f - lpf_encoder);
-//	motor_right.encoder_data = motor_right.encoder_data * lpf_encoder + (int16)ctimer_count_read(SPEEDR_PULSE) * (1.0f - lpf_encoder);
 
     ctimer_count_clean(SPEEDL_PULSE);
     ctimer_count_clean(SPEEDR_PULSE);
@@ -349,15 +351,19 @@ void encoder_get(void) {
 }
 
 void encoder() {
-    encoder_left += 0.017 * motor_left.encoder_data;
-    encoder_right += 0.017 * motor_right.encoder_data; // 0.017怎么算出来的
+    // encoder_left += 0.017 * motor_left.encoder_data;
+    // encoder_right += 0.017 * motor_right.encoder_data; // 0.017怎么算出来的
+    // encoder_ave = (encoder_left + encoder_right) / 2;
+    encoder_left += motor_left.encoder_data;
+    encoder_right += motor_right.encoder_data; // 0.017怎么算出来的
     encoder_ave = (encoder_left + encoder_right) / 2;
 }
 
 void encoder_clear() {
-    encoder_left = 0.0;
-    encoder_right = 0.0;
-    encoder_ave = 0.0;
+    // encoder_left = 0.0;
+    // encoder_right = 0.0;
+    // encoder_ave = 0.0;
+    encoder_left = encoder_right = encoder_ave = 0;
 }
 
 void dir_pid (float error, float last_error, float gyro) {
