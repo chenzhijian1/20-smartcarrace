@@ -65,7 +65,7 @@ void main(void)
 	B_ = 1.7f;
 	C_ = 0.5f;
 
-    navigation_memory_test(); // 路径记忆测试
+    // navigation_memory_test(); // 路径记忆测试
 
     while(1) {
         if(P75 == 0) // 调参模式 开关在上

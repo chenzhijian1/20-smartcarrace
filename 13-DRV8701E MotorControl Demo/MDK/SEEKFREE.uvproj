@@ -694,6 +694,16 @@
               <FileType>1</FileType>
               <FilePath>.\navigation_new.c</FilePath>
             </File>
+            <File>
+              <FileName>W25Q128.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\W25Q128.c</FilePath>
+            </File>
+            <File>
+              <FileName>W25Q128_HW.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\W25Q128_HW.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -743,6 +753,16 @@
               <FileName>navigation_new.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\navigation_new.h</FilePath>
+            </File>
+            <File>
+              <FileName>W25Q128.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\W25Q128.h</FilePath>
+            </File>
+            <File>
+              <FileName>W25Q128_HW.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\W25Q128_HW.h</FilePath>
             </File>
           </Files>
         </Group>

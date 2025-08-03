@@ -63,5 +63,4 @@
 #include "voltage.h"
 #include "navigation.h"
 #include "navigation_new.h"
-#include "AT24C.h" 
 #endif

@@ -243,7 +243,7 @@ void AT24C_Write(uint16 Address, uint8 * dat, uint16 len)
         if (Address % 64 == 0)
         {
             AT24C_IIC_Stop();
-            delay_ms(10);
+            delay_ms(4);
             AT24C_IIC_Start();
             AT24C_IIC_Send_Byte(AT24C_ADDRESS);
             AT24C_IIC_Slave_Ack();
@@ -261,7 +261,7 @@ void AT24C_Write(uint16 Address, uint8 * dat, uint16 len)
         }
     }
     AT24C_IIC_Stop();
-    delay_ms(10);
+    delay_ms(4);
 }
 /**************************************************************************gps_para**************************************************************************/
 // float gps_para[32] = {0};

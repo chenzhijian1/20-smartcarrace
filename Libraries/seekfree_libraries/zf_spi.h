@@ -39,22 +39,22 @@ typedef enum
 //该枚举体禁止用户修改
 typedef enum
 {
-	//SPI只能使用同一组引脚，不允许混用引脚
+	//SPI只能使用同一组引脚，不允许混用引脚  flash用的这个！！！
 	SPI_CH1_SCLK_P15 = 0x00<<8 | P1_5, 
 	SPI_CH1_MOSI_P13 = 0x01<<8 | P1_3, 
 	SPI_CH1_MISO_P14 = 0x02<<8 | P1_4, 
 					
-	//SPI只能使用同一组引脚，不允许混用引脚	
+	//SPI只能使用同一组引脚，不允许混用引脚	 给ips114用了
 	SPI_CH2_SCLK_P25 = 0x10<<8 | P2_5, 
 	SPI_CH2_MOSI_P23 = 0x11<<8 | P2_3, 
 	SPI_CH2_MISO_P24 = 0x12<<8 | P2_4, 
 		
-	//SPI只能使用同一组引脚，不允许混用引脚	
+	//SPI只能使用同一组引脚，不允许混用引脚	 给imu660ra用了
 	SPI_CH3_SCLK_P43 = 0x20<<8 | P4_3, 
 	SPI_CH3_MOSI_P40 = 0x21<<8 | P4_0, 
 	SPI_CH3_MISO_P41 = 0x22<<8 | P4_1, 
 						
-	//SPI只能使用同一组引脚，不允许混用引脚	
+	//SPI只能使用同一组引脚，不允许混用引脚	 P34给编码器用了
 	SPI_CH4_SCLK_P32 = 0x30<<8 | P3_2, 
 	SPI_CH4_MOSI_P34 = 0x31<<8 | P3_4, 
 	SPI_CH4_MISO_P33 = 0x32<<8 | P3_3, 

@@ -11,7 +11,7 @@ typedef struct {
 } PathPoint;
 
 // 路径记忆数组
-#define MAX_PATH_POINTS 270
+#define MAX_PATH_POINTS 10
 extern PathPoint path_points[MAX_PATH_POINTS];
 
 extern uint16 path_point_count;
