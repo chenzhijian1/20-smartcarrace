@@ -48,11 +48,13 @@ void spi_init(SPIN_enum spi_n,
 	if(sck_pin != SPI_NULL_PIN)
 	{
 		gpio_mode(sck_pin & 0xFF,GPIO);
+		// gpio_mode(sck_pin & 0xFF,GPO_PP);
 	}
 	
 	if(mosi_pin != SPI_NULL_PIN)
 	{
 		gpio_mode(mosi_pin & 0xFF,GPIO);
+		// gpio_mode(mosi_pin & 0xFF,GPO_PP);
 	}
 	
 	if(miso_pin != SPI_NULL_PIN)

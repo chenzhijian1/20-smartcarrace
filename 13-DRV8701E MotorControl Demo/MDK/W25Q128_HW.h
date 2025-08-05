@@ -26,11 +26,12 @@
 #define W25Q_JEDEC_ID           0x9F
 
 // 状态寄存器位定义
-#define W25Q_BUSY_BIT           0x01    // Status Register 1, Bit 0
+#define W25Q_BUSY_BIT           0x01    // Status Register 1, Bit 0 (Write In Progress)
+#define W25Q_WEL_BIT            0x02    // Status Register 1, Bit 1 (Write Enable Latch)
 
 // 硬件SPI引脚定义 (使用通道一的默认引脚)
 // 注意：CS引脚需要软件控制，这里只是一个示例，实际项目中可能需要根据具体硬件连接调整
-#define W25Q128_HW_SPI_CS P12 // 假设使用P1.2作为硬件SPI的CS引脚
+#define W25Q128_HW_SPI_CS P47 // 假设使用P4.7作为硬件SPI的CS引脚，与gpio_mode保持一致
 
 // 函数声明 (硬件SPI版本)
 void HW_SPI_W25Q128_init(void);

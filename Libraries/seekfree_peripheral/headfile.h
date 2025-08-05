@@ -63,4 +63,6 @@
 #include "voltage.h"
 #include "navigation.h"
 #include "navigation_new.h"
+#include "my_spi.h"
+#include "W25Q128_HW.h"
 #endif

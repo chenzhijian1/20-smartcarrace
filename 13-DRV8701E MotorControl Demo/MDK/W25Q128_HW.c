@@ -7,10 +7,11 @@ void HW_SPI_W25Q128_init(void)
 {
     // 初始化硬件SPI模块，使用通道1，模式0，最高速率
     // SCK: P1.5, MOSI: P1.3, MISO: P1.4
-    spi_init(SPI_CH1, SPI_CH1_SCLK_P15, SPI_CH1_MOSI_P13, SPI_CH1_MISO_P14, 0, MASTER, SPI_SYSclk_DIV_2); // 假设SPI_SYSclk_DIV_2是最高速率
-
+    spi_init(SPI_CH1, SPI_CH1_SCLK_P15, SPI_CH1_MOSI_P13, SPI_CH1_MISO_P14, 0, MASTER, SPI_SYSclk_DIV_4); // 假设SPI_SYSclk_DIV_2是最高速率
+    gpio_mode(P3_3, GPO_PP);
+    P33 = 1;
     // 配置CS引脚为推挽输出，并拉高（不选中）
-    gpio_mode(P1_2, GPO_PP);
+    gpio_mode(P4_7, GPO_PP);
     W25Q128_HW_SPI_CS = 1;
 }
 
@@ -44,23 +45,36 @@ uint8 HW_SPI_CheckFlashBusy(void)
 // Flash写使能 (硬件SPI版本)
 void HW_SPI_FlashWriteEnable(void)
 {
+    uint8 status;
     W25Q128_HW_SPI_CS = 0; // 选中芯片
     spi_mosi(W25Q_WRITE_ENABLE); // 发送写使能命令
     W25Q128_HW_SPI_CS = 1; // 取消选中
-    // 硬件SPI通常不需要额外的延时，因为硬件会自动处理时序
+
+    // 等待WEL位被设置 (Write Enable Latch)
+    // 确保Flash已进入写使能状态
+    while (1)
+    {
+        W25Q128_HW_SPI_CS = 0; // 选中芯片
+        spi_mosi(W25Q_READ_STATUS_REG1); // 发送读取状态寄存器1命令
+        status = spi_mosi(0xFF); // 读取状态寄存器1内容
+        W25Q128_HW_SPI_CS = 1; // 取消选中
+
+        if (status & W25Q_WEL_BIT) // 如果WEL位为1
+        {
+            break; // 退出循环
+        }
+    }
 }
 
 // Flash整片擦除 (硬件SPI版本)
 void HW_SPI_FlashChipErase(void)
 {
     HW_SPI_FlashWriteEnable(); // 写使能
-    while(HW_SPI_CheckFlashBusy()); // 等待忙状态结束
-
+    while(HW_SPI_CheckFlashBusy()); // 恢复：等待忙状态结束 (确保写使能完成)
     W25Q128_HW_SPI_CS = 0; // 选中芯片
     spi_mosi(W25Q_CHIP_ERASE); // 发送整片擦除命令
     W25Q128_HW_SPI_CS = 1; // 取消选中
-
-    while(HW_SPI_CheckFlashBusy()); // 等待忙状态结束
+    while(HW_SPI_CheckFlashBusy()); // 恢复：等待忙状态结束 (确保擦除完成)
 }
 
 // Flash扇区擦除 (硬件SPI版本)
@@ -68,14 +82,13 @@ void HW_SPI_FlashSectorErase(uint32 addr)
 {
     HW_SPI_FlashWriteEnable(); // 写使能
     while(HW_SPI_CheckFlashBusy()); // 等待忙状态结束
-
     W25Q128_HW_SPI_CS = 0; // 选中芯片
     spi_mosi(W25Q_SECTOR_ERASE); // 发送扇区擦除命令
     spi_mosi((addr >> 16) & 0xFF); // 发送24位地址高8位
     spi_mosi((addr >> 8) & 0xFF);  // 发送24位地址中8位
     spi_mosi(addr & 0xFF);         // 发送24位地址低8位
     W25Q128_HW_SPI_CS = 1; // 取消选中
-
+    P63 = 0;
     while(HW_SPI_CheckFlashBusy()); // 等待忙状态结束
 }
 
@@ -119,21 +132,18 @@ uint8 HW_SPI_Read_Compare(uint32 addr, uint8 *buffer, uint16 size)
 // SPI写入N字节数据 (硬件SPI版本)
 void HW_SPI_Write_Nbytes(uint32 addr, uint8 *buffer, uint16 size)
 {
-    uint8 i;
+    uint16 i; // 修正：将循环变量改为 uint16，避免潜在溢出
     HW_SPI_FlashWriteEnable(); // 写使能
-    while(HW_SPI_CheckFlashBusy()); // 等待忙状态结束
-
+    while(HW_SPI_CheckFlashBusy()); // 等待忙状态结束 (确保写使能完成)
     W25Q128_HW_SPI_CS = 0; // 选中芯片
     spi_mosi(W25Q_PAGE_PROGRAM); // 发送页编程命令
     spi_mosi((addr >> 16) & 0xFF); // 发送24位地址高8位
     spi_mosi((addr >> 8) & 0xFF);  // 发送24位地址中8位
     spi_mosi(addr & 0xFF);         // 发送24位地址低8位
-
     for (i = 0; i < size; i++)
     {
         spi_mosi(buffer[i]); // 发送数据
     }
     W25Q128_HW_SPI_CS = 1; // 取消选中
-
-    while(HW_SPI_CheckFlashBusy()); // 等待忙状态结束
+    while(HW_SPI_CheckFlashBusy()); // 等待忙状态结束 (确保页编程完成)
 }

@@ -704,6 +704,11 @@
               <FileType>1</FileType>
               <FilePath>.\W25Q128_HW.c</FilePath>
             </File>
+            <File>
+              <FileName>my_spi.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\my_spi.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -763,6 +768,11 @@
               <FileName>W25Q128_HW.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\W25Q128_HW.h</FilePath>
+            </File>
+            <File>
+              <FileName>my_spi.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\my_spi.h</FilePath>
             </File>
           </Files>
         </Group>

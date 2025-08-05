@@ -25,7 +25,7 @@ void main(void)
     
     wireless_uart_init(); // 无线串口
     ips114_init();        // 屏幕初始化
-    imu660ra_init();      // 陀螺仪
+    // imu660ra_init();      // 陀螺仪
 //	offset_init();        // 零漂
 
     // while (1)
@@ -65,7 +65,17 @@ void main(void)
 	B_ = 1.7f;
 	C_ = 0.5f;
 
-    // navigation_memory_test(); // 路径记忆测试
+    delay_ms(5000);
+    navigation_memory_test(); // 路径记忆测试
+    // detailed_flash_debug_gpio();
+    // final_flash_debug();
+    // final_solution_debug();
+    // check_protection_mode();
+
+    // my_spi_init();
+    // while(1)  test_read_jedec_id();
+
+    // oscilloscope_debug_loop();
 
     while(1) {
         if(P75 == 0) // 调参模式 开关在上

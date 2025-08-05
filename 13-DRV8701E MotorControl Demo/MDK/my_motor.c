@@ -83,8 +83,9 @@ int16 set_rightspeed = 0;
 int32 encoder_left = 0;
 int32 encoder_right = 0;
 int32 encoder_ave = 0;
-
-float encoder_temp = 0.0;
+int32 encoder_section = 0;
+// float encoder_temp = 0.0;
+int32 encoder_temp = 0;
 
 float lpf_encoder = 0.2; //编码器低通滤波系数
 float lpf_motor = 0.1;   //电机低通滤波系数
@@ -357,13 +358,14 @@ void encoder() {
     encoder_left += motor_left.encoder_data;
     encoder_right += motor_right.encoder_data; // 0.017怎么算出来的
     encoder_ave = (encoder_left + encoder_right) / 2;
+    encoder_section += (motor_left.encoder_data + motor_right.encoder_data) / 2;
 }
 
 void encoder_clear() {
     // encoder_left = 0.0;
     // encoder_right = 0.0;
     // encoder_ave = 0.0;
-    encoder_left = encoder_right = encoder_ave = 0;
+    encoder_left = encoder_right = encoder_ave = encoder_temp = 0;
 }
 
 void dir_pid (float error, float last_error, float gyro) {

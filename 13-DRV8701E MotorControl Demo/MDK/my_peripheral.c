@@ -783,8 +783,8 @@ void ips114_show(void)
     ips114_showstr(0, 0, "n");
     ips114_showfloat(30, 0, normal_speed, 3, 2); // 显示速度值
 
-    ips114_showstr(100, 0, "encoder");
-    ips114_showfloat(160, 0, encoder_ave, 5, 1); // 显示encoder值
+    ips114_showstr(100, 0, "enc");
+    ips114_showint32(130, 0, encoder_ave, 8); // 显示encoder值
     // 0: 正常模式；1: 预环岛模式；2: 环岛模式；3: 出环调整；4: 障碍模式；5: 坡道模式
 
     // 显示电感及处理数据

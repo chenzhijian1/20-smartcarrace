@@ -49,7 +49,7 @@ extern uint16 flash_read_pointer; // 记录Flash中下一个待读取的点的�
 // void navigation_memory_test(void);
 
 // --- 新增W25Q128相关定义和声明 ---
-#include "W25Q128_HW.h" // 包含W25Q128硬件驱动头文件
+#include "my_spi.h" // 包含my_spi硬件驱动头文件
 
 // 每个导航数据点的大小 (int32距离 + float偏航角 = 4 + 4 = 8字节)
 #define NAVIGATION_POINT_SIZE 8 

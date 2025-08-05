@@ -111,7 +111,9 @@ extern float target_angle_out;
 
 // extern float encoder_ave;
 extern int32 encoder_ave;
-extern float encoder_temp;
+// extern float encoder_temp;
+extern int32 encoder_temp;
+extern int32 encoder_section;
 extern int16 normal_speed;
 extern int16 changed_speed;
 extern int16 speed_huandao;
