@@ -16,9 +16,214 @@ uint16 total_points_saved = 0;  // 记录已保存的总点数
 uint16 current_car_index = 0;   // 记录当前小车在整个路径中的索引
 uint16 flash_read_pointer = 0;  // 记录Flash中下一个待读取的点的索引
 
+uint8 straight_timer_cnt = 0, curve_timer_cnt = 0; // 用于直线和折线计时
+uint8 curvature;
+uint8 curve_cnt = 0, last_curve_cnt = 0;			   // 用于折线计数
+uint8 curvature_threshold_cnt = 0;
+uint8 right_angle_cnt = 0;
+
+uint8 was_high = 0;  // 标记是否曾经 >40
+uint8 was_low = 0;   // 标记是否曾经 <-40
+uint8 high_to_mid_reset = 0;  // 标记是否进入 >40 → (0,20) 状态
+uint8 mid_to_low_cancel = 0;  // 标记是否 (0,20) → <-40（取消清零）
+uint8 low_to_mid_reset = 0;   // 标记是否进入 <-40 → (-20,0) 状态
+uint8 mid_to_high_cancel = 0; // 标记是否 (-20,0) → >40（取消清零）
+
+float ratio_prospect = 1;						// 前瞻放大倍数
+float ratio_compensate = 1;						// 后退补偿倍数
+
 // 定义每个导航数据段包含的点数 (此宏在W25Q128方案中不再直接使用，但保留以防万一)
 #define POINTS_PER_SEGMENT 200
-#define PULSE_PER_CM 280 // 1cm = 280个脉冲
+#define PULSE_PER_CM 300 // 1cm = 280个脉冲
+
+#define DEG_TO_RAD(degrees) ((degrees) * (PI / 180.0f))
+
+void Run_Nag_Save() {
+	if (encoder_section >= PULSE_PER_CM) {
+        navigation_record_point(encoder_ave, yaw);
+        encoder_section -= PULSE_PER_CM;
+    }
+}
+
+float calculate_curvature(float theta1, float theta2, float theta3, // 三个点的切线角度（度）
+                          int d12, int d23) {// 相邻点距离
+    float d1122 = d12 / PULSE_PER_CM * 0.5,
+		  d2233 = d12 / PULSE_PER_CM * 0.5;
+    float kappa;
+    // 1. 计算三个点的切线方向向量（无需模360°，直接使用sin/cos处理周期性）
+    float T1_x = cos(DEG_TO_RAD(theta1));
+    float T1_y = sin(DEG_TO_RAD(theta1));
+//    
+//    float T2_x = cos(DEG_TO_RAD(theta2));
+//    float T2_y = sin(DEG_TO_RAD(theta2));
+//    
+    float T3_x = cos(DEG_TO_RAD(theta3));
+    float T3_y = sin(DEG_TO_RAD(theta3));
+
+    // 2. 计算方向向量差分和总弧长
+    float delta_Tx = T3_x - T1_x;
+    float delta_Ty = T3_y - T1_y;
+    float total_distance = d1122 + d2233;
+    float delta_T_norm;
+    // 3. 计算曲率（无符号版本）
+    delta_T_norm = sqrt(delta_Tx * delta_Tx + delta_Ty * delta_Ty) * (theta3 - theta1) / fabs(theta3 - theta1);
+ //   float delta_T_norm = atan2(delta_Ty, delta_Tx); // 弧度制角度差
+    kappa = delta_T_norm / total_distance / 4;
+    if(d12 == 0 || d23 == 0) kappa = 0;
+
+    return kappa;
+}
+
+void Run_Nag_reSave() {
+	uint16 search_start_index;
+	uint16 i;
+	float curvature_temp;
+	
+	search_start_index = current_car_index >= 10 ? current_car_index - 10 : current_car_index;
+
+	// 第一次前瞻点搜索 (基础前瞻)
+    // 遍历已记录的路径点，寻找一个满足基础前瞻距离的点作为目标。
+    // 前瞻距离的计算考虑了基础里程、固定系数以及与车速相关的调整因子。
+	for (i = search_start_index; i < total_points_saved; i++) {
+		if (distance_memory[i] >= encoder_ave + PULSE_PER_CM) { //PULSE_PER_CM * (motor_left.encoder_data + motor_right.encoder_data) / 2 * ratio_prospect_long 动态调整前瞻距离
+			current_car_index = i;
+			break;
+		}
+	}
+
+	//计算当前前瞻点的瞬时曲率  点越多，曲率越准确，但是计算量也越大
+	curvature_temp = 1000 * calculate_curvature(
+		yaw_memory[current_car_index],
+		yaw_memory[current_car_index + 2],
+		yaw_memory[current_car_index + 4],
+		distance_memory[current_car_index + 2] - distance_memory[current_car_index],
+		distance_memory[current_car_index + 4] - distance_memory[current_car_index + 2]);
+
+	if (curvature_threshold_cnt == 0)
+		curvature = curvature_temp;
+
+	// 后期优化，暂时不用
+	// 直道检测与标志位更新
+    // 如果瞬时曲率的绝对值小于10 (表示接近直道)，则 straight_timer_cnt 计数器增加。
+    // 否则 straight_timer_cnt 计数器清零。
+    // 如果 straight_timer_cnt 连续超过20次，则认为处于长直道，设置 curve_cnt 为1。
+	// if (fabs(curvature_temp) < 10)
+	// 	straight_timer_cnt++;
+	// else
+	// 	straight_timer_cnt = 0;
+
+	// if (straight_timer_cnt > 20)
+	// 	last_curve_cnt = curve_cnt;
+
+	// last_curve_cnt 记录上一次 curve_cnt 的值。
+    // 如果当前是第一次进入此函数，或者 curve_timer_cnt 为0，则更新 last_curve_cnt。
+	if (curve_timer_cnt == 0)
+		last_curve_cnt = curve_cnt;
+
+	// 如果从复杂弯道状态 (last_curve_cnt >= 3) 切换到非复杂弯道状态 (curve_cnt < 3)，
+    // 则对总里程进行负向补偿。为了修正车辆在急转弯时因侧滑或内外轮差导致的里程计算误差。
+	if (last_curve_cnt >= 3 && curve_cnt < 3) {
+		encoder_ave -= (motor_left.encoder_data + motor_right.encoder_data) / 2 * normal_speed * ratio_compensate;
+		curve_timer_cnt++;
+		if (curve_timer_cnt >= 20)
+			curve_timer_cnt = 0;
+	}
+	else
+		curve_timer_cnt = 0;
+	
+	// S弯或连续直角弯检测状态机
+    // 这部分逻辑用于识别复杂的S弯或连续直角弯，通过检测曲率的正负变化和阈值来判断。
+    // was_high: 标记是否曾经曲率 > 35 (右转急弯)
+    // was_low: 标记是否曾经曲率 < -35 (左转急弯)
+    // high_to_mid_reset: 标记是否从 >40 进入 (0,20) 区间 (正曲率清零状态)
+    // mid_to_low_cancel: 标记是否从 (0,20) 进入 <-40 区间 (取消正曲率清零)
+    // low_to_mid_reset: 标记是否从 <-40 进入 (-20,0) 区间 (负曲率清零状态)
+    // mid_to_high_cancel: 标记是否从 (-20,0) 进入 >40 区间 (取消负曲率清零)
+
+	// 检测从 <-40 上升到 >40 (S弯或连续弯道)
+	if (curvature_temp > 35 && was_low && !mid_to_high_cancel) {
+		curve_cnt++;
+		was_low = 0;
+	}
+	else if (curvature_temp < -35 && was_high && !mid_to_low_cancel) {
+		curve_cnt++;
+		was_high = 0;
+	}
+
+	// 检测 >40 → (0,20) → >40（正曲率清零条件）
+	if (curvature_temp > 35) {
+		was_high = 1;
+		if (!high_to_mid_reset && !mid_to_low_cancel)
+			curve_cnt = 1;
+		high_to_mid_reset = 0;
+		mid_to_low_cancel = 0;
+	}
+	// 检测 >40 → (0,20) 状态 (进入正曲率清零中间状态)
+	else if (curvature_temp > 0 && curvature_temp < 10 && was_high)
+		high_to_mid_reset = 1;
+	// 检测 (0,20) → <-40（取消正曲率清零）
+	else if (curvature_temp < -35 && high_to_mid_reset)
+		mid_to_low_cancel = 1;
+	
+	// 检测 <-40 → (-20,0) → <-40（负曲率清零条件）
+	if (curvature_temp < -35) {
+		was_low = 1;
+		if (low_to_mid_reset && !mid_to_high_cancel)
+			curve_cnt = 1;
+		low_to_mid_reset = 0;
+		mid_to_high_cancel = 0;
+	}
+	// 检测 <-40 → (-20,0) 状态 (进入负曲率清零中间状态)
+	else if (curvature_temp > -10 && curvature_temp < 0 && was_low)
+		low_to_mid_reset = 1;
+	// 检测 (-20,0) → >40（取消负曲率清零）
+	else if (curvature_temp > 35 && low_to_mid_reset)
+
+	// 直角弯道特殊处理
+    // 如果复杂弯道等级 curve_cnt 达到3且直角弯计数器 right_angle_cnt 大于2，
+    // 则递减直角弯计数器。这可能是在处理连续直角弯的逻辑。
+	if (curve_cnt >= 3 && right_angle_cnt >= 3)
+		right_angle_cnt--;
+	
+	// 第二次前瞻点搜索 (复杂弯道/折线模式)
+    // 如果处于复杂弯道模式 (lastopopop >= 3) 或强制特殊前瞻模式 (sdf == 1)，
+    // 则使用一套不同的前瞻距离计算公式。
+	if (curve_cnt >= 3) {
+		for (i = search_start_index; i < total_points_saved; i++) {
+			if (distance_memory[i] >= encoder_ave + PULSE_PER_CM * 0.5) { // PULSE_PER_CM * (motor_left.encoder_data + motor_right.encoder_data) / 2 * (curvature / 100 + C) * ratio_prospect_short 动态调整前瞻距离
+				current_car_index = i;
+				break;
+			}
+		}
+	}
+	else {
+		if (fabs(curvature) > 50) {
+			curvature_threshold_cnt++;
+			for (i = search_start_index; i < total_points_saved; i++) {
+				if (distance_memory[i] >= encoder_ave + PULSE_PER_CM * 0.5) { // PULSE_PER_CM * (motor_left.encoder_data + motor_right.encoder_data) / 2 * (curvature / 15 + C) * ratio_prospect_short 动态调整前瞻距离
+					current_car_index = i;
+					break;
+				}
+			}
+			if (curvature_threshold_cnt > 5)
+				curvature_threshold_cnt = 0;
+		}
+		else {
+			for (i = search_start_index; i < total_points_saved; i++) {
+				if (distance_memory[i] >= encoder_ave + PULSE_PER_CM * 0.5) { // PULSE_PER_CM * (motor_left.encoder_data + motor_right.encoder_data) / 2 * (curvature / 70 + C) * ratio_prospect_short 动态调整前瞻距离
+					current_car_index = i;
+					break;
+				}
+			}
+		}
+	}
+}
+
+
+
+
+
+
 
 // --- 慢速循迹 (记录模式) API 实现 ---
 

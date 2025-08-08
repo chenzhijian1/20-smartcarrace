@@ -8,7 +8,7 @@ uint8 huandao_directions[huandao_num] = {0};      // 0 表示左环岛, 1 表示右环岛
 // float huandao_low_speed[huandao_num] = {65, 75, 75, 0};   // 第n个环岛低速轮
 uint16 huandao_r[huandao_num] = {280}; // 第n个环岛半径
 // const uint16 r_out = 800; // 出环半径
-float ratio = 0;
+float ratio_r = 0;
 uint8 flag2 = 0;
 
 const uint16 d = 165; // 车宽
@@ -233,12 +233,12 @@ void speed_change()
             g_angle_turn = voltage > 9000 ? g_angle_turn_high : g_angle_turn_low;
 
             // 环岛差速计算
-            ratio = (float)(huandao_r[huandao_count] - (d/2)) / (float)(huandao_r[huandao_count] + (d/2));
+            ratio_r = (float)(huandao_r[huandao_count] - (d/2)) / (float)(huandao_r[huandao_count] + (d/2));
 
             if (flag_huandao == 0) { // 左环岛
                 target_angle_out = target_angle_in - g_angle_turn; // 目标出环角度
 
-                set_leftspeed = (int16)(normal_speed * ratio);
+                set_leftspeed = (int16)(normal_speed * ratio_r);
                 set_rightspeed = normal_speed;
 
                 if (yaw < target_angle_out) {
@@ -250,7 +250,7 @@ void speed_change()
                 target_angle_out = target_angle_in + g_angle_turn; // 目标出环角度
                 
                 set_leftspeed = normal_speed;
-                set_rightspeed = (int16)(normal_speed * ratio);
+                set_rightspeed = (int16)(normal_speed * ratio_r);
 
                 if (yaw > target_angle_out) {
                     flag = 3; // 出环
