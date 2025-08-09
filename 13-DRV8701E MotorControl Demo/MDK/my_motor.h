@@ -60,16 +60,17 @@ void motor_driver_open_out(void);
 int16 motor_closed_loop_control(motor_struct *sptr);
 void motor_control(int16 speed_l, int16 speed_r);
 void speed_change();
+void speed_adjust(int16 c_speed, int16 s_speed);
 
 void suction_fan_init(void);
 void suction_fan_control(void);
 
 extern uint8 cout_test;/***************/
 /***********速度决策*********************/
-extern float adjust_speed_after_huandao ;
-extern float adjust_speed_after_block ;
-extern float adjust_speed_after_ramp ;
-extern float adjust_speed_after_shizi ;
+// extern float adjust_speed_after_huandao ;
+// extern float adjust_speed_after_block ;
+// extern float adjust_speed_after_ramp ;
+// extern float adjust_speed_after_shizi ;
 /****************************************/
 extern float kp_motor; //电机闭环
 extern float ki_motor;
@@ -77,23 +78,23 @@ extern float kd_motor;
 
 extern int16 test_speed;
 
-extern float kp_direction; // 方向环的pid
-extern float kd_direction;
-extern float kp_direction_2; // 方向环的pid
-extern float kd_direction_2;
-extern float kp_direction_3; // 方向环的pid
-extern float kd_direction_3;
+// extern float kp_direction; // 方向环的pid
+// extern float kd_direction;
+// extern float kp_direction_2; // 方向环的pid
+// extern float kd_direction_2;
+// extern float kp_direction_3; // 方向环的pid
+// extern float kd_direction_3;
 
 extern float kpa; //三次函数拟合方向环
 extern float kpb;
 extern float kd; // 两次误差之差
 extern float kd_imu; // 陀螺仪
 
-extern float kp_gyro; // 角速度环的pd
-extern float kd_gyro;
-extern float target_gyro_z; // 期望角速度
-extern float gyro_err;      // 角速度环当前误差
-extern float gyro_last_err; // 角速度环前一次误差
+// extern float kp_gyro; // 角速度环的pd
+// extern float kd_gyro;
+// extern float target_gyro_z; // 期望角速度
+// extern float gyro_err;      // 角速度环当前误差
+// extern float gyro_last_err; // 角速度环前一次误差
 
 extern motor_struct motor_left, motor_right;
 extern int16 set_leftspeed;
@@ -114,17 +115,17 @@ extern float encoder_temp;
 extern int16 normal_speed;
 extern int16 changed_speed;
 extern int16 speed_huandao;
-extern float huandao_hight_speed[4];
-extern float huandao_low_speed[4];
-extern float hightv_huandao;
-extern float lowv_huandao;
-extern float max_speed;
-extern float block_out_encode;
-extern float block_back_encode;
-extern float block_judge; // tof障碍阈值
-extern float block_speed;
-extern float block_out_angle;
-extern float block_back_angle;
+// extern float huandao_hight_speed[4];
+// extern float huandao_low_speed[4];
+// extern float hightv_huandao;
+// extern float lowv_huandao;
+// extern float max_speed;
+// extern float block_out_encode;
+// extern float block_back_encode;
+// extern float block_judge; // tof障碍阈值
+// extern float block_speed;
+// extern float block_out_angle;
+// extern float block_back_angle;
 
 extern float distance_before_huandao;
 extern float distance_after_huandao;
@@ -135,4 +136,6 @@ extern float angle_out_threshold;
 extern float s;
 
 extern float gyro_z;
+extern float last_gyro_z; // 新增：用于存储上一个周期的角速度
+
 #endif

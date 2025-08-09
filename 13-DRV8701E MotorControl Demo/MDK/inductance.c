@@ -1,26 +1,26 @@
 #include "inductance.h"
 
-uint8 cnt = 0;
-float AD_ONE_last = 100.0f;
+// 电感差比和差系数 这样定义了之后改不了，想改只能定义成全局变量float
+#define A_ 1.2f
+#define B_ 1.7f
+#define C_ 0.5f
+
 uint8 flag1 = 0;
 
 /* 电感数据 */
 adc_struct aaddcc = {0}; // 定义电感adc采集结构体
 
-uint16 MAX_ADC[NUM] = {2000, 2000, 2000, 2000, 2000};// 每次更换电感和赛道后需要调整
+const uint16 MAX_ADC[NUM] = {2000, 2000, 2000, 2000, 2000};// 每次更换电感和赛道后需要调整
 //float MAX_ADC[NUM] = {MAX_TRANSVERSE, MAX_PORTRAINT,3700,  MAX_TRANSVERSE, MAX_PORTRAINT};
 uint16 AD_value[NUM][10];  
 //uint16 AD_value[NUM][4];    // 原始采集电感数
 uint16 ad_ave[NUM] = {0};     // 滤波处理后的电感
 float AD_ONE[NUM] = {0};      // 归一化后的电感
-uint16 middle[3] = {0}; 
+// uint16 middle[3] = {0};
 float adc_left_dir = 0.0;
 float adc_right_dir = 0.0;
 
-float A_, B_, C_;
-
-void direction_adc_init(void) // 电感（ADC）初始化
-{
+void direction_adc_init(void) {// 电感（ADC）初始化
     adc_init(ADC_P00, ADC_SYSclk_DIV_2); //  in1右横
     adc_init(ADC_P01, ADC_SYSclk_DIV_2); // in2右前
 
@@ -30,7 +30,7 @@ void direction_adc_init(void) // 电感（ADC）初始化
     adc_init(ADC_P13, ADC_SYSclk_DIV_2); //  in5中横
 }
 
-void cleanADC () {
+void cleanADC(void) {
     uint8 i;
     for (i = 0; i < NUM; i++)
         ad_ave[i] = 0;
@@ -43,8 +43,7 @@ void direction_adc_get(void)
     int i;
     cleanADC();
 
-    for (i = 0; i < 10; i++) // 6路电感，每路采集5个值进行一次处理
-    {
+    for (i = 0; i < 10; i++) {// 6路电感，每路采集5个值进行一次处理
         AD_value[0][i] = adc_once(ADC_P05, ADC_12BIT); // 左横
         AD_value[1][i] = adc_once(ADC_P06, ADC_12BIT); // 左竖
 
@@ -116,7 +115,7 @@ void direction_adc_get(void)
 							  (A_ * (AD_ONE[0] + AD_ONE[3]) + C_ * fabs(AD_ONE[1] - AD_ONE[4]));
 	}
     
-    // 十字补偿 12mm的车中间电感坏了，暂时不用
+    // 十字补偿
     // if (flag == 0 && AD_ONE[2] < 13) 
     //     aaddcc.err_dir *= (1 + (13 - AD_ONE[2]) * 0.1);
 }

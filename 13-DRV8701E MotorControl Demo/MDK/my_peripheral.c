@@ -23,23 +23,22 @@ float kd_imu_iap = 0;
 float kp_motor_iap = 20;
 float ki_motor_iap = 3.5;
 
-
-float block_speed_iap = 100;
-float hightv_huandao_iap = 170;
-float lowv_huandao_iap = 75;
-float max_speed_iap = 230;
+// float block_speed_iap = 100;
+// float hightv_huandao_iap = 170;
+// float lowv_huandao_iap = 75;
+// float max_speed_iap = 230;
 
 float speed_high_iap = 320;
 float speed_low_iap = 230;
-float speed_turn_iap = 160;
-float speed_adjust_iap = 200;
+float speed_90_iap = 160;
+float speed_S_iap = 200;
 float normal_speed_iap = 0;
 
-float block_judge_iap = 600;
-float block_out_encode_iap = 150;
-float block_back_encode_iap = 250;
-float block_out_angle_iap = 35;
-float block_back_angle_iap = 20;
+// float block_judge_iap = 600;
+// float block_out_encode_iap = 150;
+// float block_back_encode_iap = 250;
+// float block_out_angle_iap = 35;
+// float block_back_angle_iap = 20;
 
 float distance_before_huandao_iap = 150;
 float distance_after_huandao_iap = 150;
@@ -143,8 +142,7 @@ uint8 flag_gyro_z = 0;
 //        test_speed = adtemp2;
 //}
 
-void DataInit() // eeprom初始化数据
-{
+void DataInit() {// eeprom初始化数据
     iap_init(); // eeprom初始化
 //	iap_erase_page(0xff) ;
 //	extern_iap_write_float(kp_direction, 3, 1, 0x07);   // kp_direction
@@ -182,8 +180,8 @@ void DataInit() // eeprom初始化数据
     // 速度参数
     speed_high = iap_read_float(7, 0x17) > 0 ? iap_read_float(7, 0x17) : speed_high_iap;
     speed_low = iap_read_float(7, 0x20) > 0 ? iap_read_float(7, 0x20) : speed_low_iap;
-    speed_turn = iap_read_float(7, 0x27) > 0 ? iap_read_float(7, 0x27) : speed_turn_iap;
-    speed_adjust = iap_read_float(7, 0x30) > 0 ? iap_read_float(7, 0x30) : speed_adjust_iap;
+    speed_90 = iap_read_float(7, 0x27) > 0 ? iap_read_float(7, 0x27) : speed_90_iap;
+    speed_S = iap_read_float(7, 0x30) > 0 ? iap_read_float(7, 0x30) : speed_S_iap;
     normal_speed = iap_read_float(7, 0x65) > 0 ? iap_read_float(7, 0x65) : normal_speed_iap;
 
     // 暂时还未更改成环岛中的可调参数，改了也需要跟上面格式一样
@@ -247,8 +245,8 @@ unsigned char xdata ui_page2[8][30] =
         "  normal_speed",
         "  speed_high",
         "  speed_low",
-        "  speed_turn",
-        "  speed_adjust",
+        "  speed_90",
+        "  speed_S",
         "",
         "  <EXIT>---------------------"};
 
@@ -280,14 +278,11 @@ unsigned char xdata ui_page4[8][30] =
 //  返回参数      无
 //  使用示例
 //****************************************
-void UI_DispUIStrings(uint8 strings[8][30])
-{
+void UI_DispUIStrings(uint8 strings[8][30]) {
     uint8 i;
-    for (i = 0; i < 8; i++)
-    {
+    for (i = 0; i < 8; i++) {
         // 箭头出现在ui.cursor行
-        if (i == ui.cursor)
-        {
+        if (i == ui.cursor) {
             strings[i][0] = '=';
             strings[i][1] = '>';
         }
@@ -305,17 +300,12 @@ void UI_DispUIStrings(uint8 strings[8][30])
 //  返回参数      无
 //  使用示例      ui_display();
 //****************************************
-void ui_display(void)
-{
-    switch (ui.page) // 对page进行选择
-    {
+void ui_display(void) {
+    switch (ui.page) {// 对page进行选择
     case 0:
         if (ui.last == ui.page)
-        {
             UI_DispUIStrings(ui_page0);
-        }
-        else if (ui.last != ui.page)
-        {
+        else if (ui.last != ui.page) {
             ui.cursor = 1; // 箭头回到page0的首行
             ui.last = ui.page;
             ips114_clear(BLACK);
@@ -324,8 +314,7 @@ void ui_display(void)
         break;
 
     case 1:
-        if (ui.last == ui.page)
-        {
+        if (ui.last == ui.page) {
             UI_DispUIStrings(ui_page1);
 
             //
@@ -337,8 +326,7 @@ void ui_display(void)
             ips114_showfloat(150, 6, ki_motor, 2, 2);
             //
         }
-        else if (ui.last != ui.page)
-        {
+        else if (ui.last != ui.page) {
             ui.cursor = 1; // 箭头回到page1的首行
             ui.last = ui.page;
             ips114_clear(BLACK);
@@ -355,20 +343,18 @@ void ui_display(void)
         }
         break;
     case 2:
-        if (ui.last == ui.page)
-        {
+        if (ui.last == ui.page) {
             UI_DispUIStrings(ui_page2);
 
             //
             ips114_showfloat(150, 1, normal_speed, 3, 2);
             ips114_showfloat(150, 2, speed_high, 3, 2);
             ips114_showfloat(150, 3, speed_low, 3, 2);
-            ips114_showfloat(150, 4, speed_turn, 3, 2);
-            ips114_showfloat(150, 5, speed_adjust, 3, 2);
+            ips114_showfloat(150, 4, speed_90, 3, 2);
+            ips114_showfloat(150, 5, speed_S, 3, 2);
             //
         }
-        else if (ui.last != ui.page)
-        {
+        else if (ui.last != ui.page) {
             ui.cursor = 1; // 箭头回到page2的首行
             ui.last = ui.page;
             ips114_clear(BLACK);
@@ -378,14 +364,13 @@ void ui_display(void)
             ips114_showfloat(150, 1, normal_speed, 3, 2);
             ips114_showfloat(150, 2, speed_high, 3, 2);
             ips114_showfloat(150, 3, speed_low, 3, 2);
-            ips114_showfloat(150, 4, speed_turn, 3, 2);
-            ips114_showfloat(150, 5, speed_adjust, 3, 2);
+            ips114_showfloat(150, 4, speed_90, 3, 2);
+            ips114_showfloat(150, 5, speed_S, 3, 2);
             //
         }
         break;
     case 3:
-        if (ui.last == ui.page)
-        {
+        if (ui.last == ui.page) {
             UI_DispUIStrings(ui_page3);
 
             //
@@ -401,8 +386,7 @@ void ui_display(void)
 
             //
         }
-        else if (ui.last != ui.page)
-        {
+        else if (ui.last != ui.page) {
             ui.cursor = 1; // 箭头回到page3的首行
             ui.last = ui.page;
             ips114_clear(BLACK);
@@ -423,23 +407,20 @@ void ui_display(void)
         }
         break;
     case 4:
-        if (ui.last == ui.page)
-        {
+        if (ui.last == ui.page) {
             UI_DispUIStrings(ui_page4);
 
             //
 
             //
         }
-        else if (ui.last != ui.page)
-        {
+        else if (ui.last != ui.page) {
             ui.cursor = 1; // 箭头回到page3的首行
             ui.last = ui.page;
             ips114_clear(BLACK);
             UI_DispUIStrings(ui_page4);
 
             //
-
             //
         }
         break;
@@ -454,44 +435,35 @@ void ui_display(void)
 //  返回参数      无
 //  使用示例      keyScan();
 //****************************************
-void key_scan(void)
-{
+void key_scan(void) {
     // KEY_DOW
-    if (KEY2_PIN == 0)
-    {
+    if (KEY2_PIN == 0) {
         ui.cursor++;
-        if (ui.cursor > 7)
-        {
+        if (ui.cursor > 7) {
             ui.cursor = 1;
             ui.page = ui.last;
         }
-        while (1)
-        {
+        while (1) {
             if (KEY3_PIN == 1)
                 break;
         }
     }
     // KEY_UP
-    if (KEY1_PIN == 0)
-    {
+    if (KEY1_PIN == 0) {
         ui.cursor--;
-        if (ui.cursor < 1)
-        {
+        if (ui.cursor < 1) {
             ui.cursor = 7;
             ui.page = ui.last;
         }
-        while (1)
-        {
+        while (1) {
             if (KEY4_PIN == 1)
                 break;
         }
     }
 
     // KEY_ENT
-    if (KEY4_PIN == 0)
-    {
-        switch (ui.page)
-        {
+    if (KEY4_PIN == 0) {
+        switch (ui.page) {
         case 0:
             if (ui.cursor == 1)
                 ui.page = 1;
@@ -499,8 +471,7 @@ void key_scan(void)
                 ui.page = 2;
             else if (ui.cursor == 3)
                 ui.page = 3;
-            else if (ui.cursor == 7)
-            {
+            else if (ui.cursor == 7) {
                 ui.page = 4;
 
                 // kp_direction_iap = kp_direction;
@@ -525,8 +496,8 @@ void key_scan(void)
                 // max_speed_iap = max_speed;
                 speed_high_iap = speed_high;
                 speed_low_iap = speed_low;
-                speed_turn_iap = speed_turn;
-                speed_adjust_iap = speed_adjust;
+                speed_90_iap = speed_90;
+                speed_S_iap = speed_S;
 
                 // block_judge_iap = block_judge;
                 // block_out_encode_iap = block_out_encode;
@@ -547,8 +518,8 @@ void key_scan(void)
 
                 extern_iap_write_float(speed_high_iap, 3, 1, 0x17);
                 extern_iap_write_float(speed_low_iap, 3, 1, 0x20);
-                extern_iap_write_float(speed_turn_iap, 3, 1, 0x27);
-                extern_iap_write_float(speed_adjust_iap, 3, 1, 0x30);
+                extern_iap_write_float(speed_90_iap, 3, 1, 0x27);
+                extern_iap_write_float(speed_S_iap, 3, 1, 0x30);
                 extern_iap_write_float(normal_speed_iap, 3, 1, 0x65);
 
                 // extern_iap_write_float(block_judge_iap, 3, 1, 0x50);
@@ -565,219 +536,126 @@ void key_scan(void)
             break;
         case 1:
             if (ui.cursor == 1)
-            {
                 kpa += 0.5f;
-            }
             else if (ui.cursor == 2)
-            {
                 kpb += 1.0f;
-            }
             else if (ui.cursor == 3)
-            {
                 kd += 1.0f;
-            }
             else if (ui.cursor == 4)
-            {
                 kd_imu += 0.5f;
-            }
             else if (ui.cursor == 5)
-            {
                 kp_motor += 1.0f;
-            }
             else if (ui.cursor == 6)
-            {
                 ki_motor += 0.1f;
-            }
             else if (ui.cursor == 7)
-            {
                 ui.page = 0;
-            }
             break;
         case 2:
             if (ui.cursor == 1)
-            {
                 normal_speed += 5;
-            }
             else if (ui.cursor == 2)
-            {
                 speed_high += 5;
-            }
             else if (ui.cursor == 3) 
-            {
                 speed_low += 5;
-            }
             else if (ui.cursor == 4)
-            {
-                speed_turn += 5;
-            }
+                speed_90 += 5;
             else if (ui.cursor == 5)
-            {
-                speed_adjust += 5;
-            }
+                speed_S += 5;
             else if (ui.cursor == 7)
-            {
                 ui.page = 0;
-            }
             break;
         case 3:
             if (ui.cursor == 1)
-            {
-                // block_judge += 2;
                 distance_before_huandao += 1;
-            }
             else if (ui.cursor == 2)
-            {
-                // block_out_encode += 2;
                 distance_after_huandao += 1;
-            }
             else if (ui.cursor == 3)
-            {
-                // block_back_encode += 2;
                 angle_in_threshold += 1;
-            }
             else if (ui.cursor == 4)
-            {
-                // block_out_angle += 2;
                 angle_out_threshold += 1;
-            }
             else if (ui.cursor == 5)
-            {
-                // block_back_angle += 2; // 还没用上
-            }
+                ;
             else if (ui.cursor == 7)
-            {
                 ui.page = 0;
-            }
             break;
         case 4:
             if (ui.cursor == 7)
-            {
                 ui.page = 0;
-            }
             break;
         default:
             break;
             // 每一页都有自己对应的跳转页面
         }
-        while (1)
-        {
+        while (1) {
             if (KEY1_PIN == 1)
                 break;
         }
     }
     // KEY_OUT
-    if (KEY3_PIN == 0)
-    {
-        switch (ui.page)
-        {
+    if (KEY3_PIN == 0) {
+        switch (ui.page) {
         case 0:
             ui.page = 0;
             break;
         case 1:
             if (ui.cursor == 1)
-            {
                 kpa -= 0.5f;
-            }
             else if (ui.cursor == 2)
-            {
                 kpb -= 1.0f;
-            }
             else if (ui.cursor == 3)
-            {
                 kd -= 1.0f;
-            }
             else if (ui.cursor == 4)
-            {
                 kd_imu -= 0.5f;
-            }
             else if (ui.cursor == 5)
-            {
                 kp_motor -= 1.0f;
-            }
             else if (ui.cursor == 6)
-            {
                 ki_motor -= 0.1f;
-            }
             else if (ui.cursor == 7)
-            {
                 ui.page = 0;
-            }
             break;
         case 2:
             if (ui.cursor == 1)
-            {
                 normal_speed -= 5;
-            }
             else if (ui.cursor == 2)
-            {
                 speed_high -= 5;
-            }
             else if (ui.cursor == 3)
-            {
                 speed_low -= 5;
-            }
             else if (ui.cursor == 4)
-            {
-                speed_turn -= 5;
-            }
+                speed_90 -= 5;
             else if (ui.cursor == 5)
-            {
-                speed_adjust -= 5;
-            }
+                speed_S -= 5;
             else if (ui.cursor == 7)
-            {
                 ui.page = 0;
-            }
             break;
         case 3:
             if (ui.cursor == 1)
-            {
-                // block_judge -= 2;
                 distance_before_huandao -= 1;
-            }
             else if (ui.cursor == 2)
-            {
-                // block_out_encode -= 2;
                 distance_after_huandao -= 1;
-            }
             else if (ui.cursor == 3)
-            {
-                // block_back_encode -= 2;
                 angle_in_threshold -= 1;
-            }
             else if (ui.cursor == 4)
-            {
-                // block_out_angle -= 2;
                 angle_out_threshold -= 1;
-            }
             else if (ui.cursor == 5)
-            {
-                // block_back_angle -= 2; // 还没用上
-            }
+                ;
             else if (ui.cursor == 7)
-            {
                 ui.page = 0;
-            }
             break;
         case 4:
             if (ui.cursor == 7)
-            {
                 ui.page = 0;
-            }
             break;
         default:
             break;
         }
-        while (1)
-        {
+        while (1) {
             if (KEY2_PIN == 1)
                 break;
         }
     }
 }
 
-void ips114_show(void)
-{ // ips114屏幕显示
+void ips114_show(void) { // ips114屏幕显示
     // ips114_showstr(0, 0, "tof");
     // ips114_showuint16(40, 0, tof[0]); // 显示tof值
     ips114_showstr(0, 0, "n");
@@ -832,8 +710,8 @@ void ips114_show(void)
 //    ips114_showuint16(50, 3, flag_circle_out); 		   // 显示flag_huandao
 
     // 显示编码器积分值
-    ips114_showstr(110, 3, "isturn");
-    ips114_showuint8(170, 3, path_points[j].isturn);
+    ips114_showstr(110, 3, "type");
+    ips114_showuint8(170, 3, path_points[j].type);
 
     // 显示差比和处理后的err值
     ips114_showstr(0, 4, "err");
@@ -867,34 +745,29 @@ void ips114_show(void)
 //    ips114_showfloat(150, 7, (imu660ra_gyro_z - Gyro_offset_z) / 65.6, 4, 2);
 }
 
-void angle_gyro()
-{
+void angle_gyro() {
 	if (imu660ra_gyro_z > 4 || imu660ra_gyro_z < -4)
 		// yaw += (((float)imu660ra_gyro_z - GYRO_OFFSET) / 16.4f) * 0.005;
 	yaw += (gyro_z) * 0.005;
 }
 
-void pit_callback(void)
-{                        // 陀螺仪数据获取
+void pit_callback(void) { // 陀螺仪数据获取
     // imu660ra_get_acc();  // 获取加速度数据
     flag_gyro_z = 1;
-    
 //	gyro_z = (float)imu660ra_gyro_z - Gyro_offset_z;
 }
 
-void beep_init(void)
-{ // 蜂鸣器
+void beep_init(void) { // 蜂鸣器
     gpio_mode(BEEP, GPO_PP);
     BEEP = 1;
 }
-void beep_test(void)
-{ // 蜂鸣器间隔0.5s响灭一次
+
+void beep_test(void) { // 蜂鸣器间隔0.5s响灭一次
     BEEP = !BEEP;
     delay_ms(500);
 }
-float StrToDouble(const char *s)
-{
 
+float StrToDouble(const char *s) {
     int i = 0;
     int k = 0;
     float j;
@@ -930,8 +803,7 @@ float StrToDouble(const char *s)
     return result;
 }
 
-float iap_read_float(uint8 len, uint16 addr)
-{
+float iap_read_float(uint8 len, uint16 addr) {
     uint8 buf[34];
     iap_read_bytes(addr, buf, len);
     return StrToDouble(buf);

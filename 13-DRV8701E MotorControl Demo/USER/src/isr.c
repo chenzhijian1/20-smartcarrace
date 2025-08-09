@@ -118,10 +118,10 @@ void UART3_Isr() interrupt 17
 uint8 uart_buf[50];
 uint8 uart_buf_index = 0;
 uint8 receive_data;
-uint8 i;
 float receive_values[9];
 
 float string_to_float(const char *str) {
+    uint8 i;
     float result = 0.0f;
     float sign = 1.0f;
     int decimal_place = 0;
@@ -235,9 +235,9 @@ void UART4_Isr() interrupt 18
                     // case 'D':
                     //     kd_gyro = value;
                     //     break;
-                    case 't':
-                        target_gyro_z = value;
-                        break;
+                    // case 't':
+                    //     target_gyro_z = value;
+                    //     break;
                     case 'p':  // pid×éµÄkp
                         kp_motor = value;
 						motor_left.Kp_motor = kp_motor;
@@ -254,18 +254,18 @@ void UART4_Isr() interrupt 18
 					case 's':
 						s = value;
 						break;
-					case 'A':
-						A_ = value;
-						break;
-					case 'B':
-						B_ = value;
-						break;
-					case 'C':
-						C_ = value;
-						break;
-                    case 'm':
-                        path_point_count_threshold = value;
-                        break;
+					// case 'A':
+					// 	A_ = value;
+					// 	break;
+					// case 'B':
+					// 	B_ = value;
+					// 	break;
+					// case 'C':
+					// 	C_ = value;
+					// 	break;
+                    // case 'm':
+                    //     path_point_count_threshold = value;
+                    //     break;
                     case 'x':
                         distance_before_huandao = value;
                         break;
