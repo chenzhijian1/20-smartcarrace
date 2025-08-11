@@ -15,22 +15,22 @@ extern uint8 timing_started;
 // float kd_direction_2_iap = 11;
 // float kp_direction_3_iap = 5;
 // float kd_direction_3_iap = 11;
-float kpa_iap = 9;
-float kpb_iap = 25;
-float kd_iap = 130;
+float kpa_iap = 6;
+float kpb_iap = 14;
+float kd_iap = 40;
 float kd_imu_iap = 0;
 
-float kp_motor_iap = 20;
-float ki_motor_iap = 3.5;
+float kp_motor_iap = 22;
+float ki_motor_iap = 4;
 
 // float block_speed_iap = 100;
 // float hightv_huandao_iap = 170;
 // float lowv_huandao_iap = 75;
 // float max_speed_iap = 230;
 
-float speed_high_iap = 320;
-float speed_low_iap = 230;
-float speed_90_iap = 160;
+float speed_high_iap = 500;
+float speed_low_iap = 400;
+float speed_90_iap = 300;
 float speed_S_iap = 200;
 float normal_speed_iap = 0;
 
@@ -202,6 +202,7 @@ void DataInit() {// eeprom初始化数据
     if (path_point_count != 0) {
         read_path();
         flag_key_fast = 1;
+        send_flag_nav = 1;
     }
     else {
         flag_key_fast = 0;
@@ -735,8 +736,14 @@ void ips114_show(void) { // ips114屏幕显示
 // 	ips114_showstr(0, 7, "offset");
 // //  ips114_showuint8(50, 7, count_flag_4);
 //     ips114_showfloat(50, 7, Gyro_offset_z, 4, 2);
-    ips114_showstr(0, 7, "j");
-    ips114_showuint16(50, 7, j);
+    if (flag_key_fast == 1) {
+        ips114_showstr(0, 7, "j");
+        ips114_showuint16(50, 7, j);
+    }
+    else {
+        ips114_showstr(0, 7, "j");
+        ips114_showuint16(50, 7, path_point_count);
+    }
 
     ips114_showstr(110, 7, "angle");
     ips114_showfloat(150, 7, yaw, 4, 2);
@@ -753,6 +760,7 @@ void angle_gyro() {
 
 void pit_callback(void) { // 陀螺仪数据获取
     // imu660ra_get_acc();  // 获取加速度数据
+    imu660ra_get_gyro(); // 获取陀螺仪数据
     flag_gyro_z = 1;
 //	gyro_z = (float)imu660ra_gyro_z - Gyro_offset_z;
 }

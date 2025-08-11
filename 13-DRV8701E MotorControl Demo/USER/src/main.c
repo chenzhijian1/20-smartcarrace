@@ -2,6 +2,7 @@
 
 uint8 send_flag;
 uint8 i;
+uint16 page_addr;
 
 extern uint8 timing_started_start;
 extern uint32 timer_cnt;
@@ -14,20 +15,18 @@ void main(void) {
     
     motor_driver_init_ir();      // 电机
     // motor_driver_init_dr();      // 电机
-    // suction_fan_init();   // 风扇
+    suction_fan_init();   // 风扇
 
-    voltage_init();       // 电压检测
+    // voltage_init();       // 电压检测
     
     encoder_init();       // 编码器
     direction_adc_init(); // 电感
     
     wireless_uart_init(); // 无线串口
     ips114_init();        // 屏幕初始化
-    // imu660ra_init();      // 陀螺仪
+    imu660ra_init();      // 陀螺仪
 //	offset_init();        // 零漂
 
-    // while (1)
-    //     P52 = !P52;
     // while (1) {
     //     voltage = read_voltage();
     //     if (voltage > 11500)
@@ -47,10 +46,12 @@ void main(void) {
 
     pit_timer_ms(TIM_1, 5);  // 电感、陀螺仪、编码器、串口
     pit_timer_ms(TIM_4, 5);  // 电机、电压检测、路径记忆
-    // DataInit(); 
+    DataInit();
 
     // flag = 4;
-    // normal_speed = 280.0f;    // 运行速度
+    normal_speed = 320.0f;    // 运行速度
+
+    // generate_test_path();     // 生成路径
 	
     // 电感系数逐飞
 	// A_ = 1.0f;
@@ -58,7 +59,7 @@ void main(void) {
 	// C_ = 0.0f;
 
     while(1) {
-        if(P75 == 0) {// 调参模式 开关在上
+        if(P76 == 0) {// 调参模式 开关在上
             flag_key_control = 1;
             // key_scan();
             // ui_display();
@@ -70,16 +71,22 @@ void main(void) {
 
         // 此处所有的按键都是调试用，实际需要通过检测磁钢停车来
         if (KEY1_PIN == 0) {
+            send_flag_nav = 1; // 导航结束标志位
             write_path();
+            // verify_eeprom_storage();
+            nav_end_flag_sent = 0;
         }
 
-        if (KEY2_PIN == 0) // 切换模式  从上往下第二个
-        {
-            refresh();
-            j = 1;
-            flag_end = 0;
-
-            timing_started_start = 1;
+        // if (KEY2_PIN == 0) // 切换模式  从上往下第二个
+        // {
+        //     refresh();
+        //     j = 0;
+        //     flag_end = 0;
+        //     flag = 0;
+        //     timing_started_start = 1;
+        // }
+        if (KEY2_PIN == 0) {
+            suction_fan_off();
         }
 
         if (timer_cnt >= 200) { // 1s切换状态
@@ -89,7 +96,7 @@ void main(void) {
             timer_cnt = 0;
         }
 
-        if (KEY3_PIN == 0) // 重置   从上往下第四个
+        if (KEY3_PIN == 0) // 重置   从上往下第三个
         {
         	refresh();
             huandao_count = 0;
@@ -97,7 +104,10 @@ void main(void) {
             flag_end = 0;
         }
 
-        if (KEY4_PIN == 0)  flag_stop = !flag_stop;  // 从上往下第三个
+        // if (KEY4_PIN == 0)  flag_stop = !flag_stop;  // 从上往下第四个
+        if (KEY4_PIN == 0)
+            for (page_addr = 0x200; page_addr <= 0x2600; page_addr += 0x200)
+                iap_erase_page(page_addr);
 		
  		// if (send_flag) {
  		// 	send_flag = 0;
@@ -133,16 +143,22 @@ void main(void) {
         //     // printf("%.2f,%.6f,%d\r\n", yaw, Gyro_offset_z, imu660ra_gyro_z / 16.4);
  		// }
 
-        if (send_flag_nav) {
+        if (send_flag_nav && nav_end_flag_sent == 0) {
             send_flag_nav = 0;
+            nav_end_flag_sent = 1;
+            printf("%d\r\n", path_point_count);
             for (i = 0; i < path_point_count; i++)
-                printf("%d,%.2f,%.2f,%d,%.2f\r\n", path_point_count, path_points[path_point_count].distance, path_points[path_point_count].yaw_relative, path_points[path_point_count].type, gyro_z);
+                printf("%d,%.2f,%.2f,%d\r\n", i, path_points[i].distance, path_points[i].yaw_absolute, path_points[i].type);
         }
         // if (flag == 1)  printf("%.1f\r\n", AD_ONE[0] + AD_ONE[3]);
 
-        if (flag_gyro_z) {
-            flag_gyro_z = 0;
-            imu660ra_get_gyro(); // 获取陀螺仪数据
-        }
+        // if (flag_gyro_z) {
+        //     flag_gyro_z = 0;
+            
+        // }
     }
+    // flag_key_control = 1;
+    // while (1) {
+    //     printf("%.1f,%.1f\r\n", gyro_z, yaw);
+    // }
 }

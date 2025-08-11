@@ -6,12 +6,13 @@
 // 路段类型宏定义
 #define PATH_STRAIGHT    0      // 直道
 #define PATH_TURN        1      // 折线/普通弯道
-#define PATH_S_TURN      2      // 连续几字弯
-#define PATH_ROUNDABOUT  3      // 环岛
+// #define PATH_S_TURN      2      // 连续几字弯
+#define PATH_ROUNDABOUT  2      // 环岛
+
 
 typedef struct {
     float distance;     // 路段距离 (编码器计数值)
-    float yaw_relative; // 转弯处的绝对航向角 (°)
+    float yaw_absolute; // 转弯处的绝对航向角 (°)
     uint8 type;         // 路段类型
 } PathPoint;
 
@@ -34,19 +35,19 @@ extern uint8 flag_fast_start;
 
 // extern uint8 a;
 
-#define gyro_threshold_high 100
-#define gyro_threshold_low 10
+#define gyro_threshold_high 150
+#define gyro_threshold_low 40
 
-#define angle_turn 10
+#define angle_turn 15
 #define angle_90 70
 #define angle_180 150
 
 #define err_straight 15
 #define err_turn 30
 
-#define distance_long 50 * distance_ratio  // 路径点距离阈值，用于判断是否为长直道
+#define distance_long 80 * distance_ratio  // 路径点距离阈值，用于判断是否为长直道
 #define distance_min 5 * distance_ratio  // 最小路径点距离，用于筛除很短的路径点
-#define distance_ratio 134 / 30  // 编码器计数值与实际距离的比例系数(计数值/实际距离cm)
+#define distance_ratio 170 / 30  // 编码器计数值与实际距离的比例系数(计数值/实际距离cm)
 
 extern float speed_high;
 extern float speed_low;
@@ -64,5 +65,7 @@ void refresh(void);
 
 void read_path(void);
 void write_path(void);
+void generate_test_path(void); // 新增：测试路径生成函数
+void verify_eeprom_storage(void); // 新增：EEPROM存储验证函数
 
 #endif /* __NAVIGATION_H__ */

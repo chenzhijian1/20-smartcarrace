@@ -8,8 +8,8 @@
 // 定义按键引脚
 #define KEY1_PIN P73
 #define KEY2_PIN P72
-#define KEY3_PIN P70
-#define KEY4_PIN P71
+#define KEY3_PIN P71
+#define KEY4_PIN P70
 
 // 定义拨码开关引脚
 #define SW1_PIN P74

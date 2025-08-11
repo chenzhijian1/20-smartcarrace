@@ -44,8 +44,8 @@ void TM4_Isr() interrupt 20
 //		count_tof =0;
 //		//block_judgement();
 //	}
-	voltage = read_voltage();
-    // suction_fan_control();
+	// voltage = read_voltage();
+    suction_fan_on();
 
     // if (normal_speed != 0) {
 		speed_change();

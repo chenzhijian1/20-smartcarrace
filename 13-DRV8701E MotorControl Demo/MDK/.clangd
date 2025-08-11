@@ -1,14 +1,15 @@
 CompileFlags:
   Add:
-    - '-IF:\keil5\C251\INC'
-    - '-IF:\keil5\C251\INC\STC'
-    - '-Ic:\Users\czj\Desktop\navigation\Libraries\libraries'
-    - '-Ic:\Users\czj\Desktop\navigation\Libraries\seekfree_libraries'
-    - '-Ic:\Users\czj\Desktop\navigation\Libraries\seekfree_peripheral'
-    - '-Ic:\Users\czj\Desktop\navigation\13-DRV8701E MotorControl Demo\CODE'
-    - '-Ic:\Users\czj\Desktop\navigation\13-DRV8701E MotorControl Demo\USER\inc'
-    - '-Ic:\Users\czj\Desktop\navigation\13-DRV8701E MotorControl Demo\USER\src'
-    - '-Ic:\Users\czj\Desktop\navigation\Libraries\seekfree_components'
+    - '--target=arm-none-eabi'
+    - '-If:/keil5/C251/INC'
+    - '-If:/keil5/C251/INC/STC'
+    - '-Ic:/Users/czj/Desktop/navigation/Libraries/libraries'
+    - '-Ic:/Users/czj/Desktop/navigation/Libraries/seekfree_libraries'
+    - '-Ic:/Users/czj/Desktop/navigation/Libraries/seekfree_peripheral'
+    - '-I"c:/Users/czj/Desktop/navigation/13-DRV8701E MotorControl Demo/CODE"'
+    - '-I"c:/Users/czj/Desktop/navigation/13-DRV8701E MotorControl Demo/USER/inc"'
+    - '-I"c:/Users/czj/Desktop/navigation/13-DRV8701E MotorControl Demo/USER/src"'
+    - '-Ic:/Users/czj/Desktop/navigation/Libraries/seekfree_components'
     - '-D__C251__'
     - '-D__VSCODE_C251__'
     - '-Dreentrant='
@@ -33,3 +34,11 @@ CompileFlags:
     - '-D_at_='
     - '-D_priority_='
     - '-D_task_='
+  Compiler: F:/keil5/C251/bin/C251.EXE
+
+
+---
+If:
+  PathMatch: */CMSIS/.*
+Diagnostics:
+  Suppress: ["*", undeclared_var_use_suggest]

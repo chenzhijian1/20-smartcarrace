@@ -52,6 +52,7 @@ void encoder();
 void encoder_clear();
 void motor_struct_parameter_init(motor_struct *sptr, int16 sspeed);
 void dir_pid (float, float, float);
+void dir_pid_(float, float, float);
 void dir_pid_sep (float, float);
 void gyro_pd_control(void); // 新增角速度PD控制函数
 void motor_driver_init_dr(void);
@@ -63,7 +64,8 @@ void speed_change();
 void speed_adjust(int16 c_speed, int16 s_speed);
 
 void suction_fan_init(void);
-void suction_fan_control(void);
+void suction_fan_on(void);
+void suction_fan_off(void);
 
 extern uint8 cout_test;/***************/
 /***********速度决策*********************/
@@ -105,6 +107,7 @@ extern uint8 flag_stop;
 extern uint8 flag_key_control;
 extern uint8 flag_key_fast;
 extern uint8 flag_start;
+extern uint8 nav_end_flag_sent; // 新增：导航结束标志是否已发送
 
 extern uint8 flag_huandao; 
 extern float target_angle_in;
@@ -137,5 +140,7 @@ extern float s;
 
 extern float gyro_z;
 extern float last_gyro_z; // 新增：用于存储上一个周期的角速度
+
+extern uint16 pwm_fan;
 
 #endif

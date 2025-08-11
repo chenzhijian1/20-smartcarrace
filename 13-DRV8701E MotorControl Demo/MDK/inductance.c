@@ -111,8 +111,12 @@ void direction_adc_get(void)
     // }
     
 	else {
-		aaddcc.err_dir = 30 * (A_ * (AD_ONE[0] - AD_ONE[3]) + B_ * (AD_ONE[1] - AD_ONE[4])) /
-							  (A_ * (AD_ONE[0] + AD_ONE[3]) + C_ * fabs(AD_ONE[1] - AD_ONE[4]));
+        // if (flag_key_fast == 1)
+		//     aaddcc.err_dir = 30 * (1.2 * (AD_ONE[0] - AD_ONE[3]) + 1.7 * (AD_ONE[1] - AD_ONE[4])) /
+		// 					  (1.2 * (AD_ONE[0] + AD_ONE[3]) + 0.5 * fabs(AD_ONE[1] - AD_ONE[4]));
+        // else
+            aaddcc.err_dir = 30 * (1.0 * (AD_ONE[0] - AD_ONE[3]) + 1.0 * (AD_ONE[1] - AD_ONE[4])) /
+                              (1.0 * (AD_ONE[0] + AD_ONE[3]) + 1.0 * fabs(AD_ONE[1] - AD_ONE[4]));
 	}
     
     // Ê®×Ö²¹³¥

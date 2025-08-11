@@ -46,9 +46,13 @@ int16 normal_speed_cal = 0;
 // float kd_direction_3 = 11;
 
 // 新方向环
-float kpa = 22.0f; // 4   2
-float kpb = 20.0f; // 15  10
-float kd = 100.0f; // 40  25
+float kpa = 4.0f; // 4   2
+float kpb = 14.0f; // 15  10
+float kd = 40.0f; // 40  25
+float kpa_ = 15.0f;
+float kpb_ = 25.0f;
+float kd_ = 30.0f;
+
 float kd_imu = 0.0f;
 
 // 角速度环
@@ -59,8 +63,8 @@ float kd_imu = 0.0f;
 // float gyro_last_err = 0.0f; // 角速度环前一次误差
 
 // 速度环
-float kp_motor = 18.0f;
-float ki_motor = 9.0f;
+float kp_motor = 22.0f;
+float ki_motor = 4.0f;
 float kd_motor = 0.0f;
 
 uint8 flag = 0; // 0: 正常模式；1: 预环岛模式；2: 环岛模式；3: 出环调整；4: 障碍模式；5: 坡道模式
@@ -68,6 +72,7 @@ uint8 flag_stop = 0; // 0: 未停止；1: 停止
 uint8 flag_key_control = 0; // 0：调参模式；1：跑车模式
 uint8 flag_key_fast = 0; // 0：正常模式；1：快速模式
 uint8 flag_start = 0; // 0: 未开始快速循迹；1: 开始快速循迹
+uint8 nav_end_flag_sent = 0; // 0: 未发送导航结束标志；1: 发送导航结束标志
 uint8 cnt_start = 0;
 uint8 cnt_stop = 0;
 
@@ -76,8 +81,8 @@ int16 changed_speed = 0;
 int16 set_leftspeed = 0;
 int16 set_rightspeed = 0;
 // 编码器积分值
-float encoder_left = 0.0;
-float encoder_right = 0.0;
+// float encoder_left = 0.0;
+// float encoder_right = 0.0;
 float encoder_ave = 0.0;
 float encoder_temp = 0.0;
 
@@ -115,18 +120,20 @@ void speed_change()
         if (flag_key_fast == 1)  fast_tracking();
         else
             if (normal_speed != 0 && flag != 4 && flag != 5)  Path_record();
-        
+            else if (normal_speed_pre != 0 && normal_speed == 0)  Point_record(); // 最后一个点
+                
         if (imu660ra_gyro_z <= 4 && imu660ra_gyro_z >= -4)
             imu660ra_gyro_z = 0;
-        gyro_z = gyro_z * lpf_gyro + (float)imu660ra_gyro_z / 16.4f * (1 - lpf_gyro); // 陀螺仪低通滤波
+        // gyro_z = gyro_z * lpf_gyro + (float)imu660ra_gyro_z / 16.4f * (1 - lpf_gyro); // 陀螺仪低通滤波
+        gyro_z = (float)imu660ra_gyro_z / 16.4f;
 
         switch (flag)
         {
         case 0: // 正常模式
-//            if(fabs(aaddcc.err_dir) < 1 && fabs(aaddcc.last_err_dir) < 1 && !(aaddcc.err_dir ==0 && aaddcc.last_err_dir ==0 ))
-           				// test_speed += 0.001;
-            // if (time == 0)
-                dir_pid(aaddcc.err_dir, aaddcc.last_err_dir, gyro_z); // 方向环输出期望角速度target_gyro_z
+            // if (flag_key_fast == 1)
+            //     dir_pid(aaddcc.err_dir, aaddcc.last_err_dir, gyro_z); // 方向环输出
+            // else
+                dir_pid_(aaddcc.err_dir, aaddcc.last_err_dir, gyro_z); // 方向环输出
             // gyro_pd_control(); // 角速度环计算changed_speed
             
             // time = (time + 1) % 2;
@@ -182,13 +189,16 @@ void speed_change()
                 // }
                 switch (path_points[j].type) {
                     case PATH_STRAIGHT:
-                        speed_adjust(100, 600);
+                        speed_adjust(200, 800);
                         break;
                     case PATH_TURN:
                         speed_adjust(120, 700);
                         break;
-                    case PATH_S_TURN:
-                        speed_adjust(130, 700);
+                    // case PATH_S_TURN:
+                    //     speed_adjust(130, 700);
+                    default:
+                        speed_adjust(120, 600);
+                        break;
                 }
             }
             else {
@@ -322,6 +332,7 @@ void speed_change()
                 set_leftspeed = 0;
                 set_rightspeed = 0;
                 flag_key_control = 0;
+                suction_fan_off();
                 send_flag_nav = 1; // 导航结束标志位
             }
 
@@ -337,7 +348,8 @@ void car_stop_judge() {
         set_leftspeed = 0;
         set_rightspeed = 0;
 		normal_speed = 0;
-        // flag_stop = 1;
+        flag_key_control = 0;
+        suction_fan_off();
     }
 }
 
@@ -365,18 +377,15 @@ void encoder_get(void) {
 }
 
 void encoder() {
-    if (flag != 2) {
-        encoder_left += 0.017 * motor_left.encoder_data;
-        encoder_right += 0.017 * motor_right.encoder_data; // 0.017怎么算出来的
-        encoder_ave = (encoder_left + encoder_right) / 2;
-    }
-    else
-        encoder_clear();
+    // encoder_left += 0.017 * motor_left.encoder_data;
+    // encoder_right += 0.017 * motor_right.encoder_data; // 0.017怎么算出来的
+    // encoder_ave = (encoder_left + encoder_right) / 2;
+    encoder_ave += (0.017 * motor_left.encoder_data + 0.017 * motor_right.encoder_data) / 2;
 }
 
 void encoder_clear() {
-    encoder_left = 0.0;
-    encoder_right = 0.0;
+    // encoder_left = 0.0;
+    // encoder_right = 0.0;
     encoder_ave = 0.0;
 }
 
@@ -386,6 +395,18 @@ void dir_pid (float error, float last_error, float gyro) {
     p_out = (int16)((kpa / 10) * error + (kpb / 10000) * error * error * error);
 
 	d_out = (int16)(kd * (error - last_error)) + (int16)(kd_imu / 100.0 * gyro);
+    output = p_out + d_out;
+
+    // target_gyro_z = -(float)output; // 方向环输出期望角速度
+    changed_speed = output;
+}
+
+void dir_pid_ (float error, float last_error, float gyro) {
+    int16 p_out, d_out, output;
+    
+    p_out = (int16)((kpa_ / 10) * error + (kpb_ / 10000) * error * error * error);
+
+	d_out = (int16)(kd_ * (error - last_error)) + (int16)(kd_imu / 100.0 * gyro);
     output = p_out + d_out;
 
     // target_gyro_z = -(float)output; // 方向环输出期望角速度
@@ -408,7 +429,7 @@ void dir_pid (float error, float last_error, float gyro) {
 void speed_adjust(int16 c_speed, int16 s_speed) {
     changed_speed = MINMAX(changed_speed, -c_speed, c_speed);
 
-    k = fabs(aaddcc.err_dir / 100.0f);
+    k = fabs(aaddcc.err_dir / 80.0f);
     if (changed_speed > 0) {
         set_leftspeed = test_speed - changed_speed * (1 + k);
         set_rightspeed = test_speed + changed_speed;
@@ -552,8 +573,10 @@ void motor_control(int16 speed_l, int16 speed_r) {
 	// motor_left.duty1 = 2000;
 	// motor_right.duty1 = 1000;
 
-    motor_left.duty1 = MINMAX(motor_left.duty1 * (12600.0f / voltage), -10000, 10000);
-    motor_right.duty1 = MINMAX(motor_right.duty1 * (12600.0f / voltage), -10000, 10000);
+    // motor_left.duty1 = MINMAX(motor_left.duty1 * (12600.0f / voltage), -10000, 10000);
+    // motor_right.duty1 = MINMAX(motor_right.duty1 * (12600.0f / voltage), -10000, 10000);
+    motor_left.duty1 = MINMAX(motor_left.duty1, -10000, 10000);
+    motor_right.duty1 = MINMAX(motor_right.duty1, -10000, 10000);
 
     motor_driver_open_out_ir();
 	// motor_driver_open_out_dr();
@@ -609,12 +632,17 @@ void motor_struct_parameter_init(motor_struct *sptr, int16 sspeed) {
 
 void suction_fan_init(void) {
     gpio_mode(P7_7, GPO_PP);
-    pwm_init(PWMA_CH4N_P33, 17000, 0);
+    pwm_init(PWMB_CH2_P75, 17000, 0);
 }
 
-void suction_fan_control(void) {
+void suction_fan_on(void) {
     P77 = 1;
     if (pwm_fan < PWM_DUTY_MAX)  pwm_fan += 100;
     else  pwm_fan = PWM_DUTY_MAX;
     pwm_duty(PWMA_CH4N_P33, pwm_fan);
+}
+
+void suction_fan_off(void) {
+    pwm_fan = 0;
+    P67 = 0;
 }
