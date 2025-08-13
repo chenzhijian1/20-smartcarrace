@@ -711,8 +711,8 @@ void ips114_show(void) { // ips114屏幕显示
 //    ips114_showuint16(50, 3, flag_circle_out); 		   // 显示flag_huandao
 
     // 显示编码器积分值
-    ips114_showstr(110, 3, "type");
-    ips114_showuint8(170, 3, path_points[j].type);
+    // ips114_showstr(110, 3, "type");
+    // ips114_showuint8(170, 3, path_points[j].type);
 
     // 显示差比和处理后的err值
     ips114_showstr(0, 4, "err");

@@ -1,285 +1,214 @@
 #include "headfile.h"
+#include <math.h>
+
+#ifndef PI
+#define PI 3.14159265f
+#endif
 
 PathPoint path_points[MAX_PATH_POINTS] = {0};
 
-uint16 path_point_count = 0; // µÚÒ»¸öµãÎªÆğµãÒÑ¾­³õÊ¼»¯Îª0,0
-uint16 j = 0; // ÓÃÓÚÒÆ¶¯Â·¾¶µãµÄË÷Òı
-// uint8 s_turn_active = 0; // ĞÂÔö£ºSÍä¼¤»î±êÖ¾£¬ÓÃÓÚÅĞ¶ÏÊÇ·ñ´¦ÓÚ¿ÉÄÜÉı¼¶ÎªSÍäµÄÆÕÍ¨ÍäµÀÖĞ
-// uint16 s_turn_start_point_index = 0; // ĞÂÔö£ºSÍäÆğÊ¼µãµÄË÷Òı
-// uint8 s_turn_start_yaw_direction = 2; // ĞÂÔö£ºSÍäÆğÊ¼µãµÄyaw·½Ïò (0:×ó×ª/¸ºyaw, 1:ÓÒ×ª/Õıyaw, 2:Î´¶¨Òå/ÖØÖÃ)
-uint8 current_path_type = PATH_STRAIGHT; // ĞÂÔö£ºµ±Ç°Â·¶ÎÀàĞÍ
-uint8 last_flag = 0; // ĞÂÔö£ºÓÃÓÚ´æ´¢ÉÏÒ»¸öÖÜÆÚµÄflagÖµ
-// uint16 path_point_count_threshold = 100; // Â·¾¶µããĞÖµ
-uint8 flag_end = 0; // 0±íÊ¾Î´µ½´ïÖÕµã,1±íÊ¾µ½´ïÖÕµã
+uint16 path_point_count = 0;
+uint16 j = 0; // ç”¨äºå›æ”¾æ—¶çš„è·¯å¾„ç‚¹ç´¢å¼•
+
+// é‡‡æ ·é…ç½® - åŸºäºç¼–ç å™¨170=30cmçš„æ¯”ä¾‹
+#define DISTANCE_RATIO (170.0f / 30.0f)        // ç¼–ç å™¨æ¯”ä¾‹ï¼š5.67
+#define DISTANCE_SEG    6.0f
+#define SAMPLE_DISTANCE (DISTANCE_SEG * DISTANCE_RATIO) // 6cmé‡‡æ ·é—´éš”ï¼Œçº¦34ç¼–ç å™¨å€¼
+
+// è·¯å¾„è®°å½•çŠ¶æ€å®å®šä¹‰ï¼ŒèŠ‚çœå†…å­˜
+#define RECORD_SAMPLING 0    // é‡‡æ ·é˜¶æ®µ
+#define RECORD_COMPLETE 1    // è®°å½•å®Œæˆ
+
+static uint8 record_state = RECORD_SAMPLING;
+static float last_sample_distance = 0.0f;    // ä¸Šæ¬¡é‡‡æ ·è·ç¦»
+static uint8 lap_complete = 0;               // ä¸€åœˆå®Œæˆæ ‡å¿—
+
+// å›æ”¾ç›¸å…³å˜é‡
+uint8 flag_end = 0;
 uint8 send_flag_nav = 0;
+uint8 send_curvature_flag = 0; // ç”¨äºå‘é€æ›²ç‡æ•°æ®
 uint8 flag_fast_start = 0;
 
-static uint8 is_waiting_for_turn_confirmation = 0; // ĞÂÔö£ºµÈ´ı×ªÍäÈ·ÈÏ±êÖ¾
-static uint16 waiting_start_index = 0; // ĞÂÔö£ºµÈ´ı×´Ì¬¿ªÊ¼Ê±µÄÂ·¾¶µãË÷Òı
-
+// é€Ÿåº¦é…ç½®
 float speed_high = 600;
 float speed_low = 450;
 float speed_90 = 350;
 float speed_S = 200;
 
-// uint8 a = 0;
+// è§’åº¦æ¯”ç›¸å…³å®å®šä¹‰
+#define ANGLE_RATIO_STRAIGHT_MAX 0.7f    // ç›´é“æœ€å¤§è§’åº¦æ¯”ï¼ˆåº¦/6cmï¼‰
+#define ANGLE_RATIO_SMALLCURVE_MAX 2.5f  // å°å¼¯æœ€å¤§è§’åº¦æ¯”ï¼ˆåº¦/6cmï¼‰
+#define ANGLE_RATIO_RIGHTCURVE_MAX 4.0f  // ç›´è§’å¼¯æœ€å¤§è§’åº¦æ¯”ï¼ˆåº¦/6cmï¼‰
+#define ANGLE_RATIO_STRAIGHT_TO_SMALLCURVE_INV (1.0f/(ANGLE_RATIO_SMALLCURVE_MAX-ANGLE_RATIO_STRAIGHT_MAX)) // çº¿æ€§æ’å€¼ç³»æ•°
+#define ANGLE_RATIO_SMALLCURVE_TO_RIGHTCURVE_INV (1.0f/(ANGLE_RATIO_RIGHTCURVE_MAX-ANGLE_RATIO_SMALLCURVE_MAX)) // çº¿æ€§æ’å€¼ç³»æ•°
 
-void Path_record(void) {
-    float prev_yaw_for_comparison; // ÉùÃ÷ÔÚº¯Êı¿ªÍ·
-
-    // »·µºÅĞ¶Ï
-    if (flag == 2 && last_flag != 2) { // µÚÒ»´Î½øÈë»·µº
-        Point_record();
-        current_path_type = PATH_ROUNDABOUT;
-    }
-    else if (flag == 2) { // ÕıÔÚ»·µºÖĞ
-        // ²»¼ÇÂ¼ÈÎºÎµã
-    }
-    else { // ·Ç»·µºÄ£Ê½
-        // ¼ì²éÊÇ·ñ´ÓÖ±µÀ½øÈëÍäµÀ
-        // Ê¹ÓÃµ±Ç°yawÓëÉÏÒ»¸öÂ·¾¶µãyawµÄ²îÖµÀ´ÅĞ¶Ï×ªÍä
-        prev_yaw_for_comparison = (path_point_count == 0) ? 0.0f : path_points[path_point_count - 1].yaw_absolute;
-        if (current_path_type == PATH_STRAIGHT && fabs(gyro_z) > gyro_threshold_high && fabs(yaw - prev_yaw_for_comparison) > angle_turn && encoder_ave > distance_min) {
-            Point_record();
-            current_path_type = PATH_TURN; // ÏÈÅĞ¶ÏÎªÆÕÍ¨ÍäµÀ
-            // s_turn_active = 1; // ¼¤»îSÍä¼ì²â
-            // s_turn_start_point_index = path_point_count; // ¼ÇÂ¼SÍäÆğÊ¼µãµÄË÷Òı
-            // s_turn_start_yaw_direction = (yaw > 0) ? 1 : 0; // ¼ÇÂ¼SÍäÆğÊ¼µãµÄyaw·½Ïò (1:Õıyaw/ÓÒ×ª, 0:¸ºyaw/×ó×ª)
-        }
-        // ¼ì²éÊÇ·ñ´ÓÍäµÀ½øÈëÖ±µÀ (SÍä½áÊøÌõ¼şÒ²Ò»Ñù)
-        else if (current_path_type == PATH_TURN && fabs(gyro_z) < gyro_threshold_low && encoder_ave > distance_min) { // ÒÆ³ıÁË || current_path_type == PATH_S_TURN
-            Point_record();
-            current_path_type = PATH_STRAIGHT; // ½øÈëÖ±µÀ
-            // s_turn_active = 0; // ÍË³öSÍä¼ì²â
-            // s_turn_start_point_index = 0; // ÖØÖÃSÍäÆğÊ¼µãË÷Òı
-            // s_turn_start_yaw_direction = 2; // ÖØÖÃSÍäÆğÊ¼µãyaw·½ÏòÎªÎ´¶¨Òå
-        }
-        // SÍäÉı¼¶ÅĞ¶Ï£ºÈç¹ûµ±Ç°ÊÇÆÕÍ¨ÍäµÀ£¬ÇÒyaw±ä»¯³¬¹ıangle_180£¬»òÕßµ±Ç°yaw·½ÏòÓëÆğÊ¼yaw·½ÏòÏà·´£¬ÔòÉı¼¶ÎªSÍä
-        // else if (s_turn_active && current_path_type == PATH_TURN && (fabs(yaw) >= angle_180 || 
-        //          ((yaw > angle_90 && s_turn_start_yaw_direction == 0) || (yaw < -angle_90 && s_turn_start_yaw_direction == 1)))) {
-        //     // ±éÀú´ÓSÍäÆğÊ¼µãµ½µ±Ç°µã£¬½«ËùÓĞµãµÄÀàĞÍ¸üĞÂÎªPATH_S_TURN
-        //     for (i = s_turn_start_point_index; i <= path_point_count; i++)
-        //         path_points[i].type = PATH_S_TURN;
-        //     current_path_type = PATH_S_TURN; // ¸üĞÂµ±Ç°Â·¶ÎÀàĞÍ
-        //     // ²»ĞèÒªÖØĞÂ¼ÇÂ¼µã£¬Ö»ÊÇĞŞ¸ÄÁËÒÑ¼ÇÂ¼µãµÄÀàĞÍ
-        // }
-        // else if (s_turn_active && current_path_type == PATH_S_TURN) {
-        //     // ³ÖĞøÔÚSÍäÖĞ£¬²»¼ÇÂ¼ĞÂµã£¬Ö±µ½³öSÍä
-        // }
-        // ÆäËûÇé¿ö£¬²»¼ÇÂ¼ĞÂµã
-    }
-    last_flag = flag;
+// ç®€åŒ–çš„è§’åº¦å˜åŒ–ç‡è®¡ç®—å‡½æ•°ï¼ˆå›ºå®šè·ç¦»é—´éš”ï¼‰
+float calculate_simple_angle_ratio(float yaw1, float yaw2) {
+    // è®¡ç®—è§’åº¦å˜åŒ–ï¼ˆç›´æ¥ç›¸å‡ï¼‰
+    float angle_change = yaw2 - yaw1;
+    
+    // å–ç»å¯¹å€¼ï¼Œé¿å…fabså‡½æ•°
+    float abs_angle_change = (angle_change >= 0) ? angle_change : -angle_change;
+    
+    // è§’åº¦å˜åŒ–ç‡ = è§’åº¦å˜åŒ– / å›ºå®šè·ç¦»é—´éš”ï¼ˆåº¦/6cmï¼‰
+    // SAMPLE_DISTANCE çº¦ç­‰äº34ç¼–ç å™¨å€¼ï¼Œå¯¹åº”6cm
+    return abs_angle_change / DISTANCE_SEG;
 }
 
-void Point_record(void) {
-    path_points[path_point_count].distance = encoder_ave;
-    path_points[path_point_count].yaw_absolute = yaw;
-    path_points[path_point_count].type = current_path_type; // Ê¹ÓÃĞÂµÄÃ¶¾ÙÀàĞÍ
-    path_point_count++; // ÏÈ¸³ÖµÔÙ×ÔÔö£¬Ê¹path_points[0]´æ´¢µÚÒ»¸öµã
-
-    send_flag_nav = 1;
-
-    // refresh(); // ÒÆ³ı´Ëµ÷ÓÃ£¬ÊµÏÖÈ«¾ÖÀï³Ì¼ÇÒä
-    // flag_type = !flag_type; // ²»ÔÙĞèÒª£¬ÓÉ current_path_type ¹ÜÀí
-}
-
-// ¿ìËÙÑ­¼£º¯Êı (µÚ¶şÈ¦Ê¹ÓÃ)
-void fast_tracking(void) {
-    // ´¦ÀíÀï³ÌÆ«´óµÈ´ıÈ·ÈÏ×´Ì¬
-    if (is_waiting_for_turn_confirmation) {
-        // ¼ì²éÊÇ·ñÂú×ã×ªÍä»ò»·µºÌõ¼ş
-        uint8 turn_condition_met = 0;
-        if (waiting_start_index + 1 < path_point_count) {
-            // ¼ì²éÊÇ·ñÊÇÖ±½ÇÍä
-            if (path_points[waiting_start_index+1].type == PATH_TURN && fabs(path_points[waiting_start_index+1].yaw_absolute - path_points[waiting_start_index].yaw_absolute) > angle_90 && fabs(gyro_z) > gyro_threshold_high) {
-                turn_condition_met = 1;
-            }
-            // ¼ì²éÊÇ·ñÊÇ»·µº
-            else if (path_points[waiting_start_index+1].type == PATH_ROUNDABOUT && flag == 2) {
-                turn_condition_met = 1;
-            }
-        }
-
-        if (turn_condition_met) {
-            // Ìõ¼şÂú×ã£¬»ØÍËjºÍencoder_ave
-            j = waiting_start_index;
-            encoder_ave = path_points[j].distance;
-            is_waiting_for_turn_confirmation = 0; // ÍË³öµÈ´ı×´Ì¬
-            // ¼ÌĞøÖ´ĞĞºóĞøÂß¼­£¬ÈÃÀï³ÌÆ«¶ÌµÄĞ£×¼ÉúĞ§
-        }
-        else {
-            // Ìõ¼ş²»Âú×ã£¬¼ÌĞøµÈ´ı£¬±£³ÖÂıËÙ
-            normal_speed = speed_90;
-            return; // Á¢¼´·µ»Ø£¬µÈ´ıÏÂÒ»¸öÖÜÆÚ
-        }
+// æ ¹æ®è§’åº¦æ¯”è®¡ç®—é€Ÿåº¦
+float angle_ratio_to_speed(float ratio) {
+    float weight;
+    if (ratio <= ANGLE_RATIO_STRAIGHT_MAX) {
+        return speed_high;
     }
-
-    // if (flag_fast_start == 0) {
-    //     flag_fast_start = 1;
-    //     refresh();
-    //     delay_ms(3000);
-    // }
-    // a = 1;
-    // j ´ú±íµ±Ç°ÕıÔÚĞĞÊ»µÄÂ·¶ÎµÄË÷Òı
-    if (j + 1 < path_point_count) {
-        float current_segment_start_distance = (j == 0) ? 0.0f : path_points[j-1].distance;
-        float current_segment_start_yaw = (j == 0) ? 0.0f : path_points[j-1].yaw_absolute;
-
-        // Ö±½ÇÍäĞ£×¼ (Èç¹ûµ±Ç°Â·¶ÎÊÇÖ±½ÇÍä£¬ÇÒÂú×ãÌõ¼ş£¬ÔòÌø¹ıµ±Ç°Â·¶Î£¬Ö±½Ó½øÈëÏÂÒ»Â·¶Î)
-        // ×¢Òâ£ºÕâÀïµÄj+1ÊÇÏÂÒ»Â·¶ÎµÄÖÕµã£¬Èç¹ûµ±Ç°Â·¶ÎÊÇj£¬ÄÇÃ´ÏÂÒ»Â·¶ÎÊÇj+1
-        if (j + 1 < path_point_count && (path_points[j+1].type == PATH_TURN && fabs(path_points[j+1].yaw_absolute - path_points[j].yaw_absolute) > angle_90) && fabs(gyro_z) > gyro_threshold_high) {
-            encoder_ave = path_points[j].distance; // Àï³ÌĞ£×¼
-            j++; // Ìø¹ıµ±Ç°Â·¶Î£¬½øÈëÏÂÒ»Â·¶Î
-            // refresh(); // ÒÆ³ı´Ëµ÷ÓÃ
-        }
-        // »·µºĞ£×¼ (Èç¹ûµ±Ç°Â·¶ÎÊÇ»·µº£¬ÇÒÂú×ãÌõ¼ş£¬ÔòÌø¹ıµ±Ç°Â·¶Î£¬Ö±½Ó½øÈëÏÂÒ»Â·¶Î)
-        else if (j + 1 < path_point_count && path_points[j+1].type == PATH_ROUNDABOUT && flag == 2) {
-            encoder_ave = path_points[j].distance; // Àï³ÌĞ£×¼
-            j++; // Ìø¹ıµ±Ç°Â·¶Î£¬½øÈëÏÂÒ»Â·¶Î
-            // refresh(); // ÒÆ³ı´Ëµ÷ÓÃ
-        }
-        // Èç¹ûµ±Ç°Àï³Ì´ïµ½µ±Ç°Â·¶ÎµÄÖÕµã£¬µ«ÍÓÂİÒÇ»ò±êÖ¾Î»Î´È·ÈÏ£¬Ôò½øÈëµÈ´ı×´Ì¬
-        else if (encoder_ave >= path_points[j].distance) {
-            uint8 should_wait = 0;
-            if (j + 1 < path_point_count) { // È·±£ÓĞÏÂÒ»Â·¶Î¿ÉÒÔÅĞ¶Ï
-                // Èç¹ûÏÂÒ»Â·¶ÎÊÇÖ±½ÇÍä£¬µ«ÍÓÂİÒÇÎ´´ó·ùÆ«×ª
-                if (path_points[j+1].type == PATH_TURN && fabs(path_points[j+1].yaw_absolute - path_points[j].yaw_absolute) > angle_90 && fabs(gyro_z) < gyro_threshold_high) {
-                    should_wait = 1;
-                }
-                // Èç¹ûÏÂÒ»Â·¶ÎÊÇ»·µº£¬µ«flag²»ÊÇ2
-                else if (path_points[j+1].type == PATH_ROUNDABOUT && flag != 2) {
-                    should_wait = 1;
-                }
-            }
-
-            if (should_wait) {
-                is_waiting_for_turn_confirmation = 1;
-                waiting_start_index = j; // ¼ÇÂ¼µ±Ç°jµÄÖµ
-                normal_speed = speed_90; // ÂıËÙÍ¨¹ı
-                return; // Á¢¼´·µ»Ø£¬µÈ´ıÈ·ÈÏ
-            }
-            else {
-                // Õı³£½øÈëÏÂÒ»Â·¶Î
-                j++; // ÒÆ¶¯µ½ÏÂÒ»¸öÂ·¾¶µã£¨¼´ÏÂÒ»Â·¶ÎµÄÖÕµã£©
-                // refresh(); // ÒÆ³ı´Ëµ÷ÓÃ
-            }
-        }
-
-        // È·±£ j ÔÚÓĞĞ§·¶Î§ÄÚ£¬·ÀÖ¹Ô½½ç·ÃÎÊ
-        // if (j < path_point_count) {
-            // ¶Ô×îºóÒ»¶ÎÂ·½øĞĞÌØÊâÅĞ¶Ï£¬Ö±½ÓÉè¶¨Îª¸ßËÙ
-            if (j == path_point_count - 1) { // Èç¹ûÊÇ×îºóÒ»¶ÎÂ·
-                normal_speed = speed_high;
-            }
-            else {
-                // speed_select º¯ÊıÏÖÔÚÊ¹ÓÃÈ«¾ÖÊı¾İ¼ÆËã·Ö¶ÎÊı¾İ£¬j´ú±íµ±Ç°Â·¶ÎµÄÖÕµã
-                speed_select(path_points[j].type, // µ±Ç°Â·¶ÎµÄÀàĞÍ
-                            //  (path_points[j].distance + current_segment_start_distance) / 2.0f, // middle
-                            1.0f / 3.0f * current_segment_start_distance + 2.0f / 3.0f * path_points[j].distance, // 2/3
-                             (path_points[j].distance - current_segment_start_distance),       // dis
-                             (path_points[j].yaw_absolute - current_segment_start_yaw), // angle (µ±Ç°Â·¶ÎµÄÏà¶ÔÆ«º½½Ç)
-                             (j + 1 < path_point_count) ? path_points[j+1].yaw_absolute : path_points[j].yaw_absolute); // angle_next (ÏÂÒ»Â·¶ÎÆğµãµÄÈ«¾ÖÆ«º½½Ç£¬Èç¹ûÎŞÏÂÒ»Â·¶ÎÔòÓÃµ±Ç°µã)
-            }
-        // } else {
-            // Èç¹û j ÒÑ¾­³¬³ö·¶Î§£¬±íÊ¾ÒÑµ½´ïÂ·¾¶Ä©Î²£¬¿ÉÒÔÍ£Ö¹»òÖ´ĞĞÆäËûÂß¼­
-            // flag = 5; // Ê¾Àı£ºÉèÖÃ½áÊø±êÖ¾
-        // }
+    else if (ratio <= ANGLE_RATIO_SMALLCURVE_MAX) {
+        // çº¿æ€§æ’å€¼ï¼šç›´é“åˆ°å°å¼¯ä¹‹é—´ï¼Œä»600åˆ°450
+        weight = (ratio - ANGLE_RATIO_STRAIGHT_MAX) * ANGLE_RATIO_STRAIGHT_TO_SMALLCURVE_INV;
+        return speed_high - weight * (speed_high - speed_low);
+    }
+    else if (ratio <= ANGLE_RATIO_RIGHTCURVE_MAX) {
+        // çº¿æ€§æ’å€¼ï¼šå°å¼¯åˆ°ç›´è§’å¼¯ä¹‹é—´ï¼Œä»450åˆ°350
+        weight = (ratio - ANGLE_RATIO_SMALLCURVE_MAX) * ANGLE_RATIO_SMALLCURVE_TO_RIGHTCURVE_INV;
+        return speed_low - weight * (speed_low - speed_90);
     }
     else {
-        if (flag_end == 0) { // µÚÒ»´Îµ½´ïÖÕµã
-            if (encoder_ave >= path_points[path_point_count - 1].distance) { // ¼ì²éÊÇ·ñµ½´ï×îºóÒ»¸ö¼ÇÂ¼µã
-                // ÒÆ¶¯µ½ÏÂÒ»¸öÂ·¾¶µã
-                j = 0; // ÖØÖÃjÎª0£¬´ÓÍ·¿ªÊ¼Ñ­¼£
-                flag_end = 1;
-                refresh();
-            }
-        }
-        else {
-            flag = 5;
-        }
+        return speed_S; // æ€¥å¼¯
     }
 }
 
-void speed_select(uint8 type, float middle, float dis, float angle, float angle_next) {
-    middle = middle < 40.0f * distance_ratio ? 40.0f * distance_ratio : middle; // ÏŞÖÆ×îĞ¡¼õËÙ¾àÀëÎª 40 cm
-    switch (type) {
-        case PATH_STRAIGHT: // Ö±µÀ
-            if (dis > distance_long) { // ³¤Ö±Ïß
-                if (encoder_ave < middle) normal_speed = speed_high;
-                else {
-                    if (fabs(angle_next) >= angle_90) normal_speed = speed_90;
-                    else normal_speed = speed_low;
-                }
+// è·¯å¾„è®°å½•å‡½æ•° - æ¯éš”6cmé‡‡æ ·
+void Path_record(void) {
+    float current_ratio = 0.0f;
+    
+    // æ£€æŸ¥æ˜¯å¦éœ€è¦é‡‡æ ·æ–°ç‚¹ï¼ˆæ¯6cmä¸€æ¬¡ï¼‰
+    // if (record_state == RECORD_SAMPLING && 
+    if (encoder_ave - last_sample_distance >= SAMPLE_DISTANCE) {
+        
+        // é‡‡æ ·æ–°çš„è·¯å¾„ç‚¹
+        if (path_point_count < MAX_PATH_POINTS) {
+            path_points[path_point_count].yaw_absolute = yaw;
+            path_point_count++;
+            last_sample_distance = encoder_ave;
+            
+            send_curvature_flag = 1;
+        }
+    }
+    
+    // æ£€æŸ¥æ˜¯å¦å®Œæˆä¸€åœˆï¼ˆé€šè¿‡ç£é’¢æ£€æµ‹æˆ–å…¶ä»–æ–¹å¼ï¼‰
+    // if (flag == 5 && record_state == RECORD_SAMPLING) {
+    //     record_state = RECORD_COMPLETE;
+    //     flag_end = 1; // æ ‡è®°å¯ä»¥å¼€å§‹å›æ”¾
+    //     send_flag_nav = 1; // å¯¼èˆªç»“æŸæ ‡å¿—ä½
+    //     nav_end_flag_sent = 0;
+    //     write_path();
+    // }
+}
+
+// å¤§å¹…ç®€åŒ–çš„å¿«é€Ÿå¾ªè¿¹å‡½æ•°ï¼ˆå¸¦å‰ç»ï¼‰
+void fast_tracking(void) {
+    uint16 current_index;
+    uint16 i;
+    float angle_ratio;
+    float max_ratio = 0.0f;  // å‰ç»èŒƒå›´å†…çš„æœ€å¤§è§’åº¦æ¯”
+    uint8 lookahead_points = (uint8)(normal_speed / 60.0f); // å‰ç»ç‚¹æ•°ï¼ŒåŸºäºé€Ÿåº¦è®¡ç®—
+    float current_distance;
+
+    // åªæœ‰æœ‰è·¯å¾„ç‚¹æ—¶æ‰å¼€å§‹å›æ”¾
+    if (path_point_count == 0) return;
+    
+    // æ£€æŸ¥æ˜¯å¦å·²ç»å®Œæˆå›æ”¾
+    // å¦‚æœå·²å®Œæˆä¸€åœˆå›æ”¾ï¼Œé‡ç½®çŠ¶æ€ï¼Œé‡æ–°å¼€å§‹è®°å½•
+    if (j >= path_point_count) {
+        refresh();
+        return;
+    }
+    
+    // è®¡ç®—å½“å‰åº”è¯¥å¯¹åº”çš„è·ç¦»ä½ç½®
+    current_distance = encoder_ave;
+    
+    // å¯»æ‰¾å½“å‰ä½ç½®å¯¹åº”çš„è·¯å¾„ç‚¹ï¼ˆåŸºäºå›ºå®šé—´éš”ï¼‰
+    current_index = (uint16)(current_distance / SAMPLE_DISTANCE);
+    if (current_index >= path_point_count) {
+        current_index = path_point_count - 1;
+    }
+    
+    // æ›´æ–°å½“å‰è·¯å¾„ç‚¹ç´¢å¼•
+    j = current_index;
+    
+    // å‰ç»é€Ÿåº¦å†³ç­–ï¼šæ£€æŸ¥å½“å‰ç‚¹åŠå‰æ–¹å‡ ä¸ªç‚¹çš„è§’åº¦æ¯”
+    if (current_index < path_point_count - 1) {
+        // åœ¨å‰ç»èŒƒå›´å†…å¯»æ‰¾æœ€å¤§çš„è§’åº¦æ¯”ï¼ˆæœ€æ€¥çš„å¼¯é“ï¼‰
+        for (i = current_index; 
+             i < path_point_count - 1 && 
+             i < current_index + lookahead_points; 
+             i++) {
+            
+            angle_ratio = calculate_simple_angle_ratio(
+                path_points[i].yaw_absolute, 
+                path_points[i + 1].yaw_absolute
+            );
+            
+            // ä¿ç•™æœ€å¤§çš„æ¯”å€¼ï¼ˆæœ€æ€¥çš„è½¬å¼¯ï¼‰
+            if (angle_ratio > max_ratio) {
+                max_ratio = angle_ratio;
             }
-            else { // ¶ÌÖ±µÀ
-                if (fabs(angle_next) >= angle_90) normal_speed = speed_90;
-                else normal_speed = speed_low;
-            }
-            break;
-        case PATH_TURN: // ÆÕÍ¨ÍäµÀ
-            if (fabs(angle) >= angle_90) normal_speed = speed_90; // Ö±½Ç
-            else normal_speed = speed_low; // Ğ¡ÕÛÏß
-            break;
-        // case PATH_S_TURN: // Á¬Ğø¼¸×ÖÍä
-        //     normal_speed = speed_S;
-        //     break;
-        case PATH_ROUNDABOUT: // »·µº
-            normal_speed = speed_low;
-            break;
-        default:
-            normal_speed = speed_low; // Ä¬ÈÏËÙ¶È
-            break;
+        }
+        
+        // æ ¹æ®å‰ç»èŒƒå›´å†…æœ€æ€¥çš„å¼¯é“æ¥è®¾å®šé€Ÿåº¦
+        normal_speed = angle_ratio_to_speed(max_ratio);
+    }
+    else {
+        // æœ€åä¸€ä¸ªç‚¹ï¼Œè®¾ä¸ºä¸­ç­‰é€Ÿåº¦
+        normal_speed = speed_low;
     }
 }
 
 void refresh(void) {
     encoder_clear();
     yaw = 0;
+    
+    // é‡ç½®è®°å½•çŠ¶æ€
+    record_state = RECORD_SAMPLING;
+    last_sample_distance = 0.0f;
+    lap_complete = 0;
+    path_point_count = 0;
+    j = 0;
+    flag_end = 0;
 }
 
 void write_path(void) {
-    // ½«Â·¾¶Êı¾İĞ´Èë EEPROM£¬ÆğÊ¼µØÖ·Ñ¡Ôñ 0x200£¬±ÜÃâÓë my_peripheral.c ÖĞ²ÎÊıÇø³åÍ»
+    // å°†è·¯å¾„æ•°æ®å†™å…¥ EEPROMï¼Œèµ·å§‹åœ°å€é€‰æ‹© 0x200ï¼Œé¿å…ä¸ my_peripheral.c ä¸­å‚æ•°åŒºå†²çª
     uint16 addr = 0x200;
     uint16 page_addr;
     uint16 i;
 
-    // ¼ÆËã×î¶à¿ÉÄÜÓÃµ½µÄÒ³²¢ÌáÇ°²Á³ı£¬×î¶à 500 ¸öµã£¬´óÔ¼ 10 kB
-    // Ñ­»·²Á³ı EEPROM Ò³Ãæ
+    // è®¡ç®—æœ€å¤šå¯èƒ½ç”¨åˆ°çš„é¡µå¹¶æå‰æ“¦é™¤ï¼Œæœ€å¤š 500 ä¸ªç‚¹ï¼Œå¤§çº¦ 8 kB
+    // å¾ªç¯æ“¦é™¤ EEPROM é¡µé¢
     for (page_addr = 0x200; page_addr <= 0x2600; page_addr += 0x200)
         iap_erase_page(page_addr);
 
     /*
-     * ÏÈ´æ´¢Â·¾¶µãÊıÁ¿£¬·½±ã¶ÁÈ¡¸´Ô­
-     * ²ÉÓÃ extern_iap_write_float Ğ´Èë£ºÕûÊıÎ» 3 Î»£¬Ğ¡Êı 0 Î»
-     * ³¤¶È = num + pointnum + 3 = 3 + 0 + 3 = 6 ×Ö½Ú
+     * å…ˆå­˜å‚¨è·¯å¾„ç‚¹æ•°é‡ï¼Œæ–¹ä¾¿è¯»å–å¤åŸ
+     * é‡‡ç”¨ extern_iap_write_float å†™å…¥ï¼šæ•´æ•°ä½ 3 ä½ï¼Œå°æ•° 0 ä½
+     * é•¿åº¦ = num + pointnum + 3 = 3 + 0 + 3 = 6 å­—èŠ‚
      */
     extern_iap_write_float((float)path_point_count, 3, 0, addr);
-    addr += 6;
+    addr = 0x400;
 
     /*
-     * ÒÀ´ÎĞ´Èë¸÷¸öÂ·¾¶µã£º
-     * distance : ÕûÊı 5 Î»£¬Ğ¡Êı 1 Î»  -> 5 + 1 + 3 = 9 ×Ö½Ú
-     * yaw      : ÕûÊı 3 Î»£¬Ğ¡Êı 1 Î»  -> 3 + 1 + 3 = 7 ×Ö½Ú
-     * type     : ÕûÊı 1 Î»£¬Ğ¡Êı 0 Î»  -> 1 + 0 + 3 = 4 ×Ö½Ú
-     * ×Ü¼ÆÃ¿µã 20 ×Ö½Ú
+     * ä¾æ¬¡å†™å…¥å„ä¸ªè·¯å¾„ç‚¹ï¼š
+     * yaw      : æ•´æ•° 3 ä½ï¼Œå°æ•° 1 ä½  -> 3 + 1 + 3 = 7 å­—èŠ‚
+     * æ€»è®¡æ¯ç‚¹ 7 å­—èŠ‚ï¼ˆåªå­˜å‚¨yawï¼Œä¸å­˜å‚¨distanceï¼‰
      */
     for (i = 0; i < path_point_count; i++) {
-        // ¾àÀë
-        extern_iap_write_float((float)path_points[i].distance, 5, 1, addr);
-        addr += 9;
-
-        // ½Ç¶È
+        // åªå†™å…¥è§’åº¦æ•°æ®
         extern_iap_write_float((float)path_points[i].yaw_absolute, 3, 1, addr);
         addr += 7;
 
-        // ÊÇ·ñ×ªÍä±êÖ¾£¨0/1£©
-        extern_iap_write_float((float)path_points[i].type, 1, 0, addr);
-        addr += 4;
-
-        // Ã¿Ğ´Èë25¸öµãºó£¬Ç¿ÖÆÌø×ªµ½ÏÂÒ»¸öEEPROMÒ³µÄÆğÊ¼µØÖ·£¨¼ÓÉÏ³õÊ¼Æ«ÒÆ£©
-        // i+1 ÊÇµ±Ç°ÒÑĞ´ÈëµãµÄÊıÁ¿
-        if ((i + 1) % 25 == 0 && (i + 1) < path_point_count) {
-            addr = 0x200 + ((i + 1) / 25) * 0x200 + 6;
+        // æ¯å†™å…¥73ä¸ªç‚¹åï¼Œå¼ºåˆ¶è·³è½¬åˆ°ä¸‹ä¸€ä¸ªEEPROMé¡µçš„èµ·å§‹åœ°å€ï¼ˆåŠ ä¸Šåˆå§‹åç§»ï¼‰
+        // 73ä¸ªç‚¹ * 7å­—èŠ‚ = 511å­—èŠ‚ï¼Œæ¥è¿‘512å­—èŠ‚é¡µé¢å¤§å°
+        if ((i + 1) % 73 == 0 && (i + 1) < path_point_count) {
+            addr = 0x400 + ((i + 1) / 73) * 0x200;
         }
     }
 }
@@ -288,181 +217,31 @@ void read_path(void) {
     uint16 addr = 0x200;
     uint16 i;
 
-    /* ¶ÁÈ¡Â·¾¶µãÊıÁ¿ */
-    path_point_count = (uint16)iap_read_float(6, addr); // È¡Ïû×¢ÊÍ£¬È·±£¶ÁÈ¡Â·¾¶µãÊıÁ¿
+    /* è¯»å–è·¯å¾„ç‚¹æ•°é‡ */
+    path_point_count = (uint16)iap_read_float(6, addr);
     if (path_point_count > MAX_PATH_POINTS) {
         path_point_count = MAX_PATH_POINTS;
-        // ÒÆ³ı flag_key_control = 0; ÒòÎªÆäÎ´¶¨Òå
     }
-    addr += 6;
+    printf("%d\r\n", path_point_count);
+    addr = 0x400;
 
-    /* °´Ë³Ğò¶ÁÈ¡¸÷Â·¾¶µãÊı¾İ */
+    /* æŒ‰é¡ºåºè¯»å–å„è·¯å¾„ç‚¹æ•°æ® */
     for (i = 0; i < path_point_count; i++) {
-        /* distance 5 Õû 1 Ğ¡ : 9 ×Ö½Ú */
-        path_points[i].distance = iap_read_float(9, addr);
-        addr += 9;
-
-        /* yaw 3 Õû 1 Ğ¡ : 7 ×Ö½Ú */
+        /* yaw 3 æ•´ 1 å° : 7 å­—èŠ‚ */
         path_points[i].yaw_absolute = iap_read_float(7, addr);
         addr += 7;
 
-        /* type 1 Õû 0 Ğ¡ : 4 ×Ö½Ú */
-        path_points[i].type = (uint8)iap_read_float(4, addr);
-        addr += 4;
-
-        // Ã¿¶ÁÈ¡25¸öµãºó£¬Ç¿ÖÆÌø×ªµ½ÏÂÒ»¸öEEPROMÒ³µÄÆğÊ¼µØÖ·£¨¼ÓÉÏ³õÊ¼Æ«ÒÆ£©
-        // i+1 ÊÇµ±Ç°ÒÑ¶ÁÈ¡µãµÄÊıÁ¿
-        if ((i + 1) % 25 == 0 && (i + 1) < path_point_count) {
-            addr = 0x200 + ((i + 1) / 25) * 0x200 + 6;
+        // æ¯è¯»å–73ä¸ªç‚¹åï¼Œå¼ºåˆ¶è·³è½¬åˆ°ä¸‹ä¸€ä¸ªEEPROMé¡µçš„èµ·å§‹åœ°å€ï¼ˆåŠ ä¸Šåˆå§‹åç§»ï¼‰
+        // 73ä¸ªç‚¹ * 7å­—èŠ‚ = 511å­—èŠ‚
+        if ((i + 1) % 73 == 0 && (i + 1) < path_point_count) {
+            addr = 0x400 + ((i + 1) / 73) * 0x200;
         }
     }
+    for (i = 0; i < path_point_count; i++)
+        printf("Point %d: Yaw=%.1f\r\n", i, path_points[i].yaw_absolute);
+
+    // è¯»å–å®Œæˆåï¼Œè®¾ç½®ç›¸å…³çŠ¶æ€
+    record_state = RECORD_COMPLETE;
+    flag_end = 0;
+    j = 0; // é‡ç½®å›æ”¾ç´¢å¼•
 }
-/*
-// ²âÊÔÂ·¾¶Éú³Éº¯Êı
-void generate_test_path(void) {
-    path_point_count = 29; // Éè¶¨²âÊÔÂ·¾¶µãµÄÊıÁ¿
-
-    path_points[0].distance = 1780.20f;
-    path_points[0].yaw_absolute = 22.10f;
-    path_points[0].type = 0;
-
-    path_points[1].distance = 1994.90f;
-    path_points[1].yaw_absolute = 72.00f;
-    path_points[1].type = 1;
-
-    path_points[2].distance = 2211.40f;
-    path_points[2].yaw_absolute = 92.10f;
-    path_points[2].type = 0;
-
-    path_points[3].distance = 2990.20f;
-    path_points[3].yaw_absolute = 166.00f;
-    path_points[3].type = 1;
-
-    path_points[4].distance = 3052.30f;
-    path_points[4].yaw_absolute = 146.00f;
-    path_points[4].type = 0;
-
-    path_points[5].distance = 3809.20f;
-    path_points[5].yaw_absolute = 168.00f;
-    path_points[5].type = 1;
-
-    path_points[6].distance = 4626.40f;
-    path_points[6].yaw_absolute = 188.00f;
-    path_points[6].type = 0;
-
-    path_points[7].distance = 4950.20f;
-    path_points[7].yaw_absolute = 309.00f;
-    path_points[7].type = 1;
-
-    path_points[8].distance = 5586.60f;
-    path_points[8].yaw_absolute = 288.00f;
-    path_points[8].type = 0;
-
-    path_points[9].distance = 5860.10f;
-    path_points[9].yaw_absolute = 177.00f;
-    path_points[9].type = 1;
-
-    path_points[10].distance = 6309.50f;
-    path_points[10].yaw_absolute = 157.00f;
-    path_points[10].type = 0;
-
-    path_points[11].distance = 6943.00f;
-    path_points[11].yaw_absolute = -87.10f;
-    path_points[11].type = 1;
-
-    path_points[12].distance = 7459.50f;
-    path_points[12].yaw_absolute = -64.30f;
-    path_points[12].type = 0;
-
-    path_points[13].distance = 7981.00f;
-    path_points[13].yaw_absolute = 161.00f;
-    path_points[13].type = 1;
-
-    path_points[14].distance = 9804.70f;
-    path_points[14].yaw_absolute = 183.00f;
-    path_points[14].type = 0;
-
-    path_points[15].distance = 10555.00f;
-    path_points[15].yaw_absolute = 437.00f;
-    path_points[15].type = 1;
-
-    path_points[16].distance = 10841.00f;
-    path_points[16].yaw_absolute = 416.00f;
-    path_points[16].type = 0;
-
-    path_points[17].distance = 11619.00f;
-    path_points[17].yaw_absolute = 172.00f;
-    path_points[17].type = 1;
-
-    path_points[18].distance = 12045.00f;
-    path_points[18].yaw_absolute = 151.00f;
-    path_points[18].type = 0;
-
-    path_points[19].distance = 12521.00f;
-    path_points[19].yaw_absolute = 19.00f;
-    path_points[19].type = 1;
-
-    path_points[20].distance = 13018.00f;
-    path_points[20].yaw_absolute = 39.30f;
-    path_points[20].type = 0;
-
-    path_points[21].distance = 13316.00f;
-    path_points[21].yaw_absolute = 160.00f;
-    path_points[21].type = 1;
-
-    path_points[22].distance = 14223.00f;
-    path_points[22].yaw_absolute = 180.00f;
-    path_points[22].type = 0;
-
-    path_points[23].distance = 15293.00f;
-    path_points[23].yaw_absolute = 327.00f;
-    path_points[23].type = 1;
-
-    path_points[24].distance = 15342.00f;
-    path_points[24].yaw_absolute = 306.00f;
-    path_points[24].type = 0;
-
-    path_points[25].distance = 15608.10f; // ×¢ÒâÕâÀïµÄÊı¾İ£¬¿´ÆğÀ´ÏñÒ»¸öºÜ´óµÄÖµ
-    path_points[25].yaw_absolute = 193.00f;
-    path_points[25].type = 1;
-    
-    path_points[26].distance = 15655.00f;
-    path_points[26].yaw_absolute = 213.00f;
-    path_points[26].type = 0;
-
-    path_points[27].distance = 16324.00f;
-    path_points[27].yaw_absolute = 342.00f;
-    path_points[27].type = 1;
-
-    path_points[28].distance = 17706.00f;
-    path_points[28].yaw_absolute = 362.00f;
-    path_points[28].type = 0;
-}
-
-void verify_eeprom_storage(void) {
-    uint16 i;
-
-    // 1. ½«µ±Ç°ÄÚ´æÖĞµÄ path_points Êı×éĞ´ÈëEEPROM
-    write_path();
-
-    // 2. ÇåÁãÄÚ´æÖĞµÄ path_points Êı×é£¬È·±£¶ÁÈ¡µÄÊÇEEPROMÖĞµÄÊı¾İ
-    for (i = 0; i < MAX_PATH_POINTS; i++) {
-        path_points[i].distance = 0.0f;
-        path_points[i].yaw_absolute = 0.0f;
-        path_points[i].type = 0;
-    }
-    path_point_count = 0; // ÖØÖÃµã¼ÆÊı
-
-    // 3. ´ÓEEPROM¶Á»ØÊı¾İ
-    read_path();
-
-    // 4. ´òÓ¡´ÓEEPROM¶Á»ØµÄÊı¾İ
-    printf("--- Data read from EEPROM ---\n");
-    printf("Path Point Count: %d\n", path_point_count);
-    for (i = 0; i < path_point_count; i++) {
-        printf("Point %d: Distance=%.2f, Yaw=%.2f, Type=%d\n",
-               i, path_points[i].distance, path_points[i].yaw_absolute, path_points[i].type);
-    }
-    printf("-----------------------------\n");
-}
-*/

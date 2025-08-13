@@ -46,12 +46,12 @@ int16 normal_speed_cal = 0;
 // float kd_direction_3 = 11;
 
 // 新方向环
-float kpa = 4.0f; // 4   2
-float kpb = 14.0f; // 15  10
-float kd = 40.0f; // 40  25
+float kpa = 15.0f; // 4   2
+float kpb = 50.0f; // 15  10
+float kd = 50.0f; // 40  25
 float kpa_ = 15.0f;
-float kpb_ = 25.0f;
-float kd_ = 30.0f;
+float kpb_ = 50.0f;
+float kd_ = 50.0f;
 
 float kd_imu = 0.0f;
 
@@ -118,9 +118,7 @@ void speed_change()
     if (flag_stop == 0)
     {
         if (flag_key_fast == 1)  fast_tracking();
-        else
-            if (normal_speed != 0 && flag != 4 && flag != 5)  Path_record();
-            else if (normal_speed_pre != 0 && normal_speed == 0)  Point_record(); // 最后一个点
+        else  Path_record();
                 
         if (imu660ra_gyro_z <= 4 && imu660ra_gyro_z >= -4)
             imu660ra_gyro_z = 0;
@@ -187,19 +185,20 @@ void speed_change()
                 //     set_leftspeed = MINMAX(set_leftspeed, -100, 600);
                 //     set_rightspeed = MINMAX(set_rightspeed, -100, 600);
                 // }
-                switch (path_points[j].type) {
-                    case PATH_STRAIGHT:
-                        speed_adjust(200, 800);
-                        break;
-                    case PATH_TURN:
-                        speed_adjust(120, 700);
-                        break;
-                    // case PATH_S_TURN:
-                    //     speed_adjust(130, 700);
-                    default:
-                        speed_adjust(120, 600);
-                        break;
-                }
+                // switch (path_points[j].type) {
+                //     case PATH_STRAIGHT:
+                //         speed_adjust(200, 800);
+                //         break;
+                //     case PATH_TURN:
+                //         speed_adjust(120, 700);
+                //         break;
+                //     // case PATH_S_TURN:
+                //     //     speed_adjust(130, 700);
+                //     default:
+                //         speed_adjust(120, 600);
+                //         break;
+                // }
+                speed_adjust(130, 600);
             }
             else {
                 // changed_speed = MINMAX(changed_speed, -110, 110); // 角速度环输出的changed_speed也需要限幅
@@ -220,7 +219,7 @@ void speed_change()
 
                 // set_leftspeed = MINMAX(set_leftspeed, -100, 500);
                 // set_rightspeed = MINMAX(set_rightspeed, -100, 500);
-                speed_adjust(120, 600);
+                speed_adjust(130, 600);
             }
 			
             break;
@@ -370,9 +369,9 @@ void encoder_get(void) {
     ctimer_count_clean(SPEEDL_PULSE);
     ctimer_count_clean(SPEEDR_PULSE);
 
-    if (SPEEDL_DIR == 0) //观察屏幕输出调整  1 0是长前瞻 0 1是短前瞻
+    if (SPEEDL_DIR == 1) //观察屏幕输出调整  1 0是长前瞻 0 1是短前瞻
         motor_left.encoder_data = -motor_left.encoder_data;
-    if (SPEEDR_DIR == 1)
+    if (SPEEDR_DIR == 0)
         motor_right.encoder_data = -motor_right.encoder_data;
 }
 
@@ -466,22 +465,22 @@ void speed_adjust(int16 c_speed, int16 s_speed) {
 //****************************************
 void motor_driver_open_out_ir(void) {
     if (motor_left.duty1 >= 0) {
-        pwm_duty(PWMA_CH1P_P60, (uint32)motor_left.duty1);
-		pwm_duty(PWMA_CH3P_P64, 0);
+        pwm_duty(PWMA_CH1P_P60, 0);
+		pwm_duty(PWMA_CH3P_P64, (uint32)motor_left.duty1);
     }
     else {
-        pwm_duty(PWMA_CH1P_P60, 0);
-        pwm_duty(PWMA_CH3P_P64, (uint32)(-motor_left.duty1));
+        pwm_duty(PWMA_CH1P_P60, (uint32)(-motor_left.duty1));
+        pwm_duty(PWMA_CH3P_P64, 0);
     }
 
     // 右轮
     if (motor_right.duty1 >= 0) {
-        pwm_duty(PWMA_CH2P_P62, (uint32)motor_right.duty1);
-        pwm_duty(PWMA_CH4P_P66, 0);
+        pwm_duty(PWMA_CH2P_P62, 0);
+        pwm_duty(PWMA_CH4P_P66, (uint32)motor_right.duty1);
     }
     else {
-        pwm_duty(PWMA_CH2P_P62, 0);
-        pwm_duty(PWMA_CH4P_P66, (uint32)(-motor_right.duty1));
+        pwm_duty(PWMA_CH2P_P62, (uint32)(-motor_right.duty1));
+        pwm_duty(PWMA_CH4P_P66, 0);
     }
 }
 

@@ -1,9 +1,6 @@
 #ifndef __HEADFILE_H_
 #define __HEADFILE_H_
 
-
-
-
 #include "isr.h"
 #include <string.h>
 #include <stdio.h>
@@ -62,4 +59,5 @@
 #include "my_peripheral.h"
 #include "voltage.h"
 #include "navigation.h"
+#include "navigation_new.h"
 #endif

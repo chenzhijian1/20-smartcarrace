@@ -12,6 +12,8 @@ void main(void) {
     EA = 0;
 
     delay_ms(300);
+
+    DataInit();
     
     motor_driver_init_ir();      // 电机
     // motor_driver_init_dr();      // 电机
@@ -46,17 +48,12 @@ void main(void) {
 
     pit_timer_ms(TIM_1, 5);  // 电感、陀螺仪、编码器、串口
     pit_timer_ms(TIM_4, 5);  // 电机、电压检测、路径记忆
-    DataInit();
+
+    
+    // generate_test_path();     // 生成路径
 
     // flag = 4;
-    normal_speed = 320.0f;    // 运行速度
-
-    // generate_test_path();     // 生成路径
-	
-    // 电感系数逐飞
-	// A_ = 1.0f;
-	// B_ = 5.0f;
-	// C_ = 0.0f;
+    normal_speed = 300.0f;    // 运行速度
 
     while(1) {
         if(P76 == 0) {// 调参模式 开关在上
@@ -96,8 +93,7 @@ void main(void) {
             timer_cnt = 0;
         }
 
-        if (KEY3_PIN == 0) // 重置   从上往下第三个
-        {
+        if (KEY3_PIN == 0) { // 重置   从上往下第三个
         	refresh();
             huandao_count = 0;
             j = 1;
@@ -143,12 +139,28 @@ void main(void) {
         //     // printf("%.2f,%.6f,%d\r\n", yaw, Gyro_offset_z, imu660ra_gyro_z / 16.4);
  		// }
 
-        if (send_flag_nav && nav_end_flag_sent == 0) {
-            send_flag_nav = 0;
-            nav_end_flag_sent = 1;
-            printf("%d\r\n", path_point_count);
-            for (i = 0; i < path_point_count; i++)
-                printf("%d,%.2f,%.2f,%d\r\n", i, path_points[i].distance, path_points[i].yaw_absolute, path_points[i].type);
+        // if (send_flag_nav && nav_end_flag_sent == 0) {
+        //     send_flag_nav = 0;
+        //     nav_end_flag_sent = 1;
+        //     printf("%d\r\n", path_point_count);
+        //     for (i = 0; i < path_point_count; i++)
+        //         printf("%d,%.2f,%.2f\r\n", i, path_points[i].distance, path_points[i].yaw_absolute);
+        // }
+
+        if (send_curvature_flag) {
+            // 实时计算并输出简单曲率（处理边界情况）
+            send_curvature_flag = 0;
+
+            if (path_point_count >= 2) {
+                // 有至少两个点时才能计算角度比
+                printf("Point %d: Angle_Ratio=%.4f, Yaw=%.1f\r\n", 
+                       path_point_count - 1, calculate_simple_angle_ratio(path_points[path_point_count - 2].yaw_absolute, path_points[path_point_count - 1].yaw_absolute), yaw);
+            }
+            else {
+                // 第一个点，无法计算角度比
+                printf("Point %d: Angle_Ratio=N/A (First Point), Yaw=%.1f\r\n", 
+                       path_point_count - 1, yaw);
+            }
         }
         // if (flag == 1)  printf("%.1f\r\n", AD_ONE[0] + AD_ONE[3]);
 

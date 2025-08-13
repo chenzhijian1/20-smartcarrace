@@ -684,6 +684,11 @@
               <FileType>1</FileType>
               <FilePath>.\navigation.c</FilePath>
             </File>
+            <File>
+              <FileName>navigation_new.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\navigation_new.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -723,6 +728,11 @@
               <FileName>navigation.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\navigation.h</FilePath>
+            </File>
+            <File>
+              <FileName>navigation_new.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\navigation_new.h</FilePath>
             </File>
           </Files>
         </Group>
