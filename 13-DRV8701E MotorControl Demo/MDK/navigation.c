@@ -10,15 +10,6 @@ PathPoint path_points[MAX_PATH_POINTS] = {0};
 uint16 path_point_count = 0;
 uint16 j = 0; // 用于回放时的路径点索引
 
-// 采样配置 - 基于编码器170=30cm的比例
-#define DISTANCE_RATIO (170.0f / 30.0f)        // 编码器比例：5.67
-#define DISTANCE_SEG    6.0f
-#define SAMPLE_DISTANCE (DISTANCE_SEG * DISTANCE_RATIO) // 6cm采样间隔，约34编码器值
-
-// 路径记录状态宏定义，节省内存
-#define RECORD_SAMPLING 0    // 采样阶段
-#define RECORD_COMPLETE 1    // 记录完成
-
 static uint8 record_state = RECORD_SAMPLING;
 static float last_sample_distance = 0.0f;    // 上次采样距离
 static uint8 lap_complete = 0;               // 一圈完成标志

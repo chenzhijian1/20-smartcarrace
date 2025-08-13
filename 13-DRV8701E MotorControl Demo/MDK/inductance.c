@@ -68,12 +68,7 @@ void direction_adc_get(void)
 
     // 归一化 normalization
     for (i = 0; i < NUM; i++)
-        AD_ONE[i] = 100 * (float)ad_ave[i] / MAX_ADC[i];
-	
-    // 环岛判断 四电感
-    // if (flag == 0 && AD_ONE[0] >= 20 && AD_ONE[3] >= 20) { //环岛
-    //     encoder_temp = encoder_ave;
-		
+        AD_ONE[i] = 100 * (float)ad_ave[i] / MAX_ADC[i];		
 		
     //     if (AD_ONE[1] >= AD_ONE[4] * 2 && AD_ONE[1] >= 30) {
 	// 		flag = 2;
@@ -90,15 +85,15 @@ void direction_adc_get(void)
     // 环岛判断 五电感
     // if (flag == 0 && flag1 == 0 && AD_ONE[2] >= 60) {
     // if (flag == 0 && ((AD_ONE[0] >= 25 && AD_ONE[3] >= 25 && AD_ONE[2] >= 35 && (AD_ONE[1] <= 20 || AD_ONE[4] <= 20)))) {
-    // if (flag == 0 && ((AD_ONE[0] + AD_ONE[3]) >= 40.0f)) {
-	// 	encoder_temp = encoder_ave;
-	// 	flag = 1;
-    // }
+    if (flag == 0 && ((AD_ONE[0] + AD_ONE[3]) >= 40.0f)) {
+		encoder_temp = encoder_ave;
+		flag = 1;
+    }
 
     // 差比和计算
     aaddcc.last_err_dir = aaddcc.err_dir;
 
-    if (AD_ONE[0] + AD_ONE[1] + AD_ONE[3] + AD_ONE[4] < 6)
+    if (AD_ONE[0] + AD_ONE[1] + AD_ONE[3] + AD_ONE[4] < 4)
         aaddcc.err_dir = aaddcc.last_err_dir;
 
     // else {
@@ -115,11 +110,11 @@ void direction_adc_get(void)
 		//     aaddcc.err_dir = 30 * (1.2 * (AD_ONE[0] - AD_ONE[3]) + 1.7 * (AD_ONE[1] - AD_ONE[4])) /
 		// 					  (1.2 * (AD_ONE[0] + AD_ONE[3]) + 0.5 * fabs(AD_ONE[1] - AD_ONE[4]));
         // else
-        if (flag_key_fast == 1)
-		    aaddcc.err_dir = 30 * (1.0 * (AD_ONE[0] - AD_ONE[3]) + 1.2 * (AD_ONE[1] - AD_ONE[4])) /
-							  (1.0 * (AD_ONE[0] + AD_ONE[3]) + 1.0 * fabs(AD_ONE[1] - AD_ONE[4]));
-        else
-            aaddcc.err_dir = 20 * (1.0 * (AD_ONE[0] - AD_ONE[3]) + 1.2 * (AD_ONE[1] - AD_ONE[4])) /
+        // if (flag_key_fast == 1)
+		//     aaddcc.err_dir = 30 * (1.0 * (AD_ONE[0] - AD_ONE[3]) + 1.2 * (AD_ONE[1] - AD_ONE[4])) /
+		// 					  (1.0 * (AD_ONE[0] + AD_ONE[3]) + 1.0 * fabs(AD_ONE[1] - AD_ONE[4]));
+        // else
+            aaddcc.err_dir = 30 * (1.0 * (AD_ONE[0] - AD_ONE[3]) + 1.2 * (AD_ONE[1] - AD_ONE[4])) /
                               (1.0 * (AD_ONE[0] + AD_ONE[3]) + 1.0 * fabs(AD_ONE[1] - AD_ONE[4]));
 	}
     

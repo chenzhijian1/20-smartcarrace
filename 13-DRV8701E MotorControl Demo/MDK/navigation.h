@@ -10,6 +10,15 @@ typedef struct {
     float yaw_absolute; // 转弯处的绝对航向角 (°)
 } PathPoint;
 
+// 采样配置 - 基于编码器170=30cm的比例
+#define DISTANCE_RATIO (170.0f / 30.0f)        // 编码器比例：5.67
+#define DISTANCE_SEG    6.0f
+#define SAMPLE_DISTANCE (DISTANCE_SEG * DISTANCE_RATIO) // 6cm采样间隔，约34编码器值
+
+// 路径记录状态宏定义，节省内存
+#define RECORD_SAMPLING 0    // 采样阶段
+#define RECORD_COMPLETE 1    // 记录完成
+
 extern PathPoint path_points[MAX_PATH_POINTS];
 
 extern uint16 path_point_count;

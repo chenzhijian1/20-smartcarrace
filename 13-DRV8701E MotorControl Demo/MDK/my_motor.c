@@ -1,16 +1,17 @@
 #include "my_motor.h"
+#include "navigation.h"
 //******************* 需要调的参数********************/
 // 环岛
-#define huandao_num 1 // 环岛个数
+#define huandao_num 3 // 环岛个数
 uint8 huandao_count = 0; // 环岛计数
-uint8 huandao_directions[huandao_num] = {0};      // 0 表示左环岛, 1 表示右环岛
+uint8 huandao_directions[huandao_num] = {1, 0, 0};      // 0 表示左环岛, 1 表示右环岛
 // float huandao_hight_speed[huandao_num] = {190, 170, 0, 0}; // 第n个环岛高速轮
 // float huandao_low_speed[huandao_num] = {65, 75, 75, 0};   // 第n个环岛低速轮
-uint16 huandao_r[huandao_num] = {280}; // 第n个环岛半径
+uint8 huandao_r[huandao_num] = {30, 40, 30}; // 第n个环岛半径
 // const uint16 r_out = 800; // 出环半径
 float ratio = 0;
 
-const uint16 d = 165; // 车宽
+const float d = 16.0f; // 车宽
 
 /*
 3s   dis_high  dis_low  g_angle_turn_high  g_angle_turn_low
@@ -19,17 +20,23 @@ n280    55       50            320             320
 n300    40       35            310             300
 n320    20       15            310             300
 */
-float distance_before_huandao = 0;
-float distance_before_huandao_high = 55; // 环岛前距离
-float distance_before_huandao_low = 50; // 环岛前距离
+float distance_before_huandao = 240;
+// float distance_before_huandao_high = 55; // 环岛前距离
+// float distance_before_huandao_low = 50; // 环岛前距离
 float distance_after_huandao = 140; // 环岛后距离
 
-float g_angle_turn = 0;
-float g_angle_turn_high = 320;
-float g_angle_turn_low = 320;
+float g_angle_turn = 30;
+// float g_angle_turn_high = 30;
+// float g_angle_turn_low = 30;
+float g_angle_inside = 270;
 
-float angle_in_threshold = 30; // 环岛入口角度阈值
+float angle_in_threshold = 20; // 环岛入口角度阈值
 float angle_out_threshold = 30; // 环岛出口角度阈值
+
+float target_angle_in = 0;
+float target_angle_in_end = 0;
+float target_angle_inside = 0;
+float target_angle_out = 0;
 
 // 速度
 int16 normal_speed = 0;
@@ -97,8 +104,6 @@ uint16 flag_circle_in = 0;
 uint16 flag_circle_out = 0;
 // uint16 cnt_circle_out = 0;
 
-float target_angle_in = 0;
-float target_angle_out = 0;
 motor_struct motor_left, motor_right; // 定义电机速度闭环变量
 
 float k;
@@ -113,7 +118,7 @@ uint16 pwm_fan = 0;
 
 void speed_change()
 {
-    if (flag == 0)
+    if (flag != 4 && flag != 5)
         car_stop_judge();
     if (flag_stop == 0)
     {
@@ -137,7 +142,6 @@ void speed_change()
             // time = (time + 1) % 2;
 
             // 速度策略
-            // if (flag_start && cnt_start < 100) {
             if (normal_speed_pre == 0 && normal_speed != 0)
                 flag_start = 1;
             if (normal_speed_pre != 0 && normal_speed == 0)
@@ -158,33 +162,6 @@ void speed_change()
             test_speed = (int16)normal_speed_cal;
 
             if (flag_key_fast == 1) {
-                // 直道和弯道不同的差速限幅
-                // if (path_points[j].type == 1) {
-                //     changed_speed = MINMAX(changed_speed, -100, 100);
-                
-                //     // 加少减多
-                //     k = fabs(aaddcc.err_dir / 100.0f);
-                //     if (changed_speed > 0) {
-                //         set_leftspeed = test_speed - changed_speed * (1 + k);
-                //         set_rightspeed = test_speed + changed_speed;
-                //     }
-                //     else {
-                //         set_leftspeed = test_speed - changed_speed;
-                //         set_rightspeed = test_speed + changed_speed * (1 + k);
-                //     }
-
-                //     set_leftspeed = MINMAX(set_leftspeed, -100, 400);
-                //     set_rightspeed = MINMAX(set_rightspeed, -100, 400);
-                // }
-                // else {
-                //     changed_speed = MINMAX(changed_speed, -300, 300); // 角速度环输出的changed_speed也需要限幅
-
-                //     set_leftspeed = test_speed - changed_speed;
-    			//     set_rightspeed = test_speed + changed_speed;
-
-                //     set_leftspeed = MINMAX(set_leftspeed, -100, 600);
-                //     set_rightspeed = MINMAX(set_rightspeed, -100, 600);
-                // }
                 // switch (path_points[j].type) {
                 //     case PATH_STRAIGHT:
                 //         speed_adjust(200, 800);
@@ -201,24 +178,6 @@ void speed_change()
                 speed_adjust(130, 600);
             }
             else {
-                // changed_speed = MINMAX(changed_speed, -110, 110); // 角速度环输出的changed_speed也需要限幅
-                
-                // 加少减多
-                // k = fabs(aaddcc.err_dir / 100.0f);
-                // if (changed_speed > 0) {
-                //     set_leftspeed = test_speed - changed_speed * (1 + k);
-                //     set_rightspeed = test_speed + changed_speed;
-                // }
-                // else {
-                //     set_leftspeed = test_speed - changed_speed;
-                //     set_rightspeed = test_speed + changed_speed * (1 + k);
-                // }
-
-                // // set_leftspeed = test_speed - changed_speed;
-                // // set_rightspeed = test_speed + changed_speed;
-
-                // set_leftspeed = MINMAX(set_leftspeed, -100, 500);
-                // set_rightspeed = MINMAX(set_rightspeed, -100, 500);
                 speed_adjust(130, 600);
             }
 			
@@ -230,13 +189,13 @@ void speed_change()
             //     flag_huandao = 1; // 右环岛
             flag_huandao = huandao_directions[huandao_count];
             
-            distance_before_huandao = voltage > 9000 ? distance_before_huandao_high : distance_before_huandao_low;
+            // distance_before_huandao = voltage > 9000 ? distance_before_huandao_high : distance_before_huandao_low;
 
             if (encoder_ave - encoder_temp < distance_before_huandao) { //没到环岛交点
 				//直行
-                normal_speed = 0;
-                set_leftspeed = normal_speed;
-				set_rightspeed = normal_speed;
+                // normal_speed = 0;
+                set_leftspeed = (int16)(normal_speed * 1.2f);
+				set_rightspeed = (int16)(normal_speed * 1.2f);
                 // set_leftspeed = 0;
                 // set_rightspeed = 0;
             }
@@ -249,54 +208,103 @@ void speed_change()
                 flag_set_angle = 1;
             }
 
-            g_angle_turn = voltage > 9000 ? g_angle_turn_high : g_angle_turn_low;
+            // g_angle_turn = voltage > 9000 ? g_angle_turn_high : g_angle_turn_low;
 
             // 环岛差速计算
             ratio = (float)(huandao_r[huandao_count] - (d/2)) / (float)(huandao_r[huandao_count] + (d/2));
 
             if (flag_huandao == 0) { // 左环岛
-                target_angle_out = target_angle_in - g_angle_turn; // 目标出环角度
+                target_angle_in_end = target_angle_in - g_angle_turn; // 目标入环角度
 
-                set_leftspeed = (int16)(normal_speed * ratio);
-                set_rightspeed = normal_speed;
+                set_leftspeed = (int16)(normal_speed * ratio * 1.1f);
+                set_rightspeed = (int16)(normal_speed * 1.1f);
 
-                if (yaw < target_angle_out) {
-                    flag = 3; // 出环
+                if (yaw < target_angle_in_end) {
+                    flag = 3; // 环内循迹
                     encoder_temp = encoder_ave;
+                    target_angle_inside = yaw; // 更新环内目标角度
                 }
             }
             else { // 右环岛
-                target_angle_out = target_angle_in + g_angle_turn; // 目标出环角度
-                
-                set_leftspeed = normal_speed;
-                set_rightspeed = (int16)(normal_speed * ratio);
+                target_angle_in_end = target_angle_in + g_angle_turn; // 目标入环角度
+
+                set_leftspeed = (int16)(normal_speed * 1.1f);
+                set_rightspeed = (int16)(normal_speed * ratio * 1.1f);
+
+                if (yaw > target_angle_in_end) {
+                    flag = 3; // 环内循迹
+                    encoder_temp = encoder_ave;
+                    target_angle_inside = yaw; // 更新环内目标角度
+                }
+            }
+            break;
+        
+        case 3: // 环内循迹
+            if (flag_huandao == 0) {
+                target_angle_out = target_angle_inside - g_angle_inside;
 
                 if (yaw > target_angle_out) {
-                    flag = 3; // 出环
+                    dir_pid_(aaddcc.err_dir, aaddcc.last_err_dir, gyro_z); // 方向环输出
+                    normal_speed_cal = (int16)-s * aaddcc.err_dir * aaddcc.err_dir + normal_speed;
+                    normal_speed_pre = normal_speed;
+                    test_speed = (int16)(normal_speed_cal * 1.1f);
+                    speed_adjust(140, 600);
+                }
+                else {
+                    flag = 7;
+                    encoder_temp = encoder_ave;
+                }
+            }
+            else {
+                target_angle_out = target_angle_inside + g_angle_inside; // 目标出环角度
+
+                if (yaw < target_angle_out) {
+                    dir_pid_(aaddcc.err_dir, aaddcc.last_err_dir, gyro_z); // 方向环输出
+                    normal_speed_cal = (int16)-s * aaddcc.err_dir * aaddcc.err_dir + normal_speed;
+                    normal_speed_pre = normal_speed;
+                    test_speed = (int16)(normal_speed_cal * 1.1f);
+                    speed_adjust(140, 600);
+                }
+                else {
+                    flag = 7;
                     encoder_temp = encoder_ave;
                 }
             }
             break;
 
-        case 3: // 出环
+        // case 6: // 出环打角
+        //     if (flag_huandao == 0) {
+        //         if (yaw < target_angle_in - 350) {
+        //             set_leftspeed = (int16)(normal_speed * ratio * 1.1f);
+        //             set_rightspeed = (int16)(normal_speed * 1.1f);
+        //         }
+        //         else {
+        //             flag = 7;
+        //             encoder_temp = encoder_ave;
+        //         }
+        //     }
+        //     else {
+        //         if (yaw < target_angle_in + 350) {
+        //             set_leftspeed = (int16)(normal_speed * 1.1f);
+        //             set_rightspeed = (int16)(normal_speed * ratio * 1.1f);
+        //         }
+        //         else {
+        //             flag = 7;
+        //             encoder_temp = encoder_ave;
+        //         }
+        //     }
+        //     break;
+        
+        case 7: // 出环直行
+            distance_after_huandao = huandao_r[huandao_count] * DISTANCE_RATIO * 1.5;
+
             if (encoder_ave - encoder_temp <= distance_after_huandao) {
-                // if (flag_huandao == 0) { // 左环岛
-                //     set_leftspeed = normal_speed * (r_out - (d/2)) / (r_out + (d/2));
-                //     // set_leftspeed = normal_speed * 0.9;
-				//     set_rightspeed = normal_speed;
-                // }
-				// else { // 右环岛
-                //     set_leftspeed = normal_speed;
-				//     set_rightspeed = normal_speed * (r_out - (d/2)) / (r_out + (d/2));
-                //     // set_rightspeed = normal_speed * 0.9;
-				// }
                 set_leftspeed = normal_speed;
                 set_rightspeed = normal_speed;
 			}
 			else {
 				// 恢复到正常循迹
 				flag = 0;
-				flag1 = 0;
                 flag_huandao = 0;
                 // 各种标志位清零
 				flag_set_angle = 0;
@@ -308,10 +316,10 @@ void speed_change()
 
                 huandao_count = (huandao_count + 1) % huandao_num; // 切换环岛
             }
-            break;
+            break;            
 
         case 4: // 起步发车
-            if (encoder_ave >= 133)  flag = 0;
+            if (encoder_ave >= 30 * DISTANCE_RATIO)  flag = 0;
 
             set_leftspeed = normal_speed;
             set_rightspeed = normal_speed;
@@ -636,9 +644,10 @@ void suction_fan_init(void) {
 
 void suction_fan_on(void) {
     P77 = 1;
-    if (pwm_fan < PWM_DUTY_MAX)  pwm_fan += 100;
-    else  pwm_fan = PWM_DUTY_MAX;
-    pwm_duty(PWMA_CH4N_P33, pwm_fan);
+    // if (pwm_fan < PWM_DUTY_MAX)  pwm_fan += 100;
+    // else  pwm_fan = PWM_DUTY_MAX;
+    pwm_fan = PWM_DUTY_MAX; // 设置风扇PWM占空比为最大值
+    pwm_duty(PWMB_CH2_P75, pwm_fan);
 }
 
 void suction_fan_off(void) {

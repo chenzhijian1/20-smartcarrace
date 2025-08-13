@@ -13,13 +13,12 @@ void main(void) {
 
     delay_ms(300);
 
-    DataInit();
+    // DataInit();
     
     motor_driver_init_ir();      // 电机
     // motor_driver_init_dr();      // 电机
-    suction_fan_init();   // 风扇
 
-    // voltage_init();       // 电压检测
+    voltage_init();       // 电压检测
     
     encoder_init();       // 编码器
     direction_adc_init(); // 电感
@@ -31,29 +30,21 @@ void main(void) {
 
     // while (1) {
     //     voltage = read_voltage();
-    //     if (voltage > 11500)
-    //         break;
-    // }
-
-    // delay_ms(1599); // 899 60F 
-
-    // while (1) {
-    //     voltage = read_voltage();
-    //     if (voltage > 11500)
+    //     if (voltage > 20000)
     //         break;
     // }
 
     // 使能全局中断
     EA = 1;
+    suction_fan_init();   // 风扇
 
     pit_timer_ms(TIM_1, 5);  // 电感、陀螺仪、编码器、串口
     pit_timer_ms(TIM_4, 5);  // 电机、电压检测、路径记忆
-
     
     // generate_test_path();     // 生成路径
 
     // flag = 4;
-    normal_speed = 300.0f;    // 运行速度
+    // normal_speed = 400.0f;    // 运行速度
 
     while(1) {
         if(P76 == 0) {// 调参模式 开关在上
@@ -105,39 +96,39 @@ void main(void) {
             for (page_addr = 0x200; page_addr <= 0x2600; page_addr += 0x200)
                 iap_erase_page(page_addr);
 		
- 		// if (send_flag) {
- 		// 	send_flag = 0;
-        //     printf("%.1f,%.1f,%.1f,%.1f,%.1f,",
-        //           kpa, kpb, kd,
-        //           motor_left.Kp_motor, motor_left.Ki_motor);
+ 		if (send_flag) {
+ 			send_flag = 0;
+            printf("%.1f,%.1f,%.1f,%.1f,%.1f,",
+                  kpa, kpb, kd,
+                  motor_left.Kp_motor, motor_left.Ki_motor);
 
-        //     printf("%.2f,", aaddcc.err_dir);
+            printf("%.2f,", aaddcc.err_dir);
 
-        //     printf("%d,%d,%d,%d,%d,%d,%d,",
-        //             motor_left.setspeed, motor_left.encoder_data,
-        //             motor_right.setspeed, motor_right.encoder_data,
-        //             motor_left.duty1,
-        //             motor_right.duty1,
-        //             normal_speed);
+            printf("%d,%d,%d,%d,%d,%d,%d,",
+                    motor_left.setspeed, motor_left.encoder_data,
+                    motor_right.setspeed, motor_right.encoder_data,
+                    motor_left.duty1,
+                    motor_right.duty1,
+                    normal_speed);
 			
- 		// 	printf("%d,", voltage);
+ 			printf("%d,", voltage);
 					
- 		// 	printf("%.1f,%.1f,%.1f,%.1f,%.1f,", AD_ONE[0],AD_ONE[1],AD_ONE[2],AD_ONE[3],AD_ONE[4]);
-        //     // printf("%d,%d,%d,%d,%d,", ad_ave[0], ad_ave[1], ad_ave[2], ad_ave[3], ad_ave[4]);
+ 			printf("%.1f,%.1f,%.1f,%.1f,", AD_ONE[0],AD_ONE[1],AD_ONE[3],AD_ONE[4]);
+            // printf("%d,%d,%d,%d,%d,", ad_ave[0], ad_ave[1], ad_ave[2], ad_ave[3], ad_ave[4]);
 
-        //     printf("%.1f,", gyro_z);
+            printf("%.1f,", gyro_z);
 
-        //     printf("%.1f,%.1f,%.1f,", distance_before_huandao, distance_after_huandao, g_angle_turn);
+            printf("%.1f,%.1f,%.1f,", distance_before_huandao, distance_after_huandao, g_angle_turn);
 
-        //     printf("%.1f,%.1f,%.1f,", A_, B_, C_);
+            // printf("%.1f,%.1f,%.1f,", A_, B_, C_);
 
-        //     printf("%d\r\n", changed_speed);
+            printf("%d\r\n", changed_speed);
 
-        //     // printf("%.1f,%.1f,%.1f,%.1f,", motor_left.Kp_motor * motor_left.out_p, motor_left.Ki_motor * motor_left.out_i, motor_left.Kp_motor * motor_right.out_p, motor_left.Ki_motor * motor_right.out_i);
+            // printf("%.1f,%.1f,%.1f,%.1f,", motor_left.Kp_motor * motor_left.out_p, motor_left.Ki_motor * motor_left.out_i, motor_left.Kp_motor * motor_right.out_p, motor_left.Ki_motor * motor_right.out_i);
 
-        //     // printf("%.1f\r\n", AD_ONE[0] + AD_ONE[3]);
-        //     // printf("%.2f,%.6f,%d\r\n", yaw, Gyro_offset_z, imu660ra_gyro_z / 16.4);
- 		// }
+            // printf("%.1f\r\n", AD_ONE[0] + AD_ONE[3]);
+            // printf("%.2f,%.6f,%d\r\n", yaw, Gyro_offset_z, imu660ra_gyro_z / 16.4);
+ 		}
 
         // if (send_flag_nav && nav_end_flag_sent == 0) {
         //     send_flag_nav = 0;
@@ -147,21 +138,22 @@ void main(void) {
         //         printf("%d,%.2f,%.2f\r\n", i, path_points[i].distance, path_points[i].yaw_absolute);
         // }
 
-        if (send_curvature_flag) {
-            // 实时计算并输出简单曲率（处理边界情况）
-            send_curvature_flag = 0;
+        // if (send_curvature_flag) {
+        //     // 实时计算并输出简单曲率（处理边界情况）
+        //     send_curvature_flag = 0;
 
-            if (path_point_count >= 2) {
-                // 有至少两个点时才能计算角度比
-                printf("Point %d: Angle_Ratio=%.4f, Yaw=%.1f\r\n", 
-                       path_point_count - 1, calculate_simple_angle_ratio(path_points[path_point_count - 2].yaw_absolute, path_points[path_point_count - 1].yaw_absolute), yaw);
-            }
-            else {
-                // 第一个点，无法计算角度比
-                printf("Point %d: Angle_Ratio=N/A (First Point), Yaw=%.1f\r\n", 
-                       path_point_count - 1, yaw);
-            }
-        }
+        //     if (path_point_count >= 2) {
+        //         // 有至少两个点时才能计算角度比
+        //         printf("Point %d: Angle_Ratio=%.4f, Yaw=%.1f\r\n", 
+        //                path_point_count - 1, calculate_simple_angle_ratio(path_points[path_point_count - 2].yaw_absolute, path_points[path_point_count - 1].yaw_absolute), yaw);
+        //     }
+        //     else {
+        //         // 第一个点，无法计算角度比
+        //         printf("Point %d: Angle_Ratio=N/A (First Point), Yaw=%.1f\r\n", 
+        //                path_point_count - 1, yaw);
+        //     }
+        // }
+
         // if (flag == 1)  printf("%.1f\r\n", AD_ONE[0] + AD_ONE[3]);
 
         // if (flag_gyro_z) {
